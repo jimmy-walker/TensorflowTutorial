@@ -1,5 +1,22 @@
 # Tensorflow
 
+**<u>所有的数学计算</u>**：先使用得到损失值$C$对输入的导数，这里的输入可以看做是下面的$y_4$，其实下面可以当做是计算$\frac{\partial C}{\partial y_4}$，涉及到交叉熵损失和softmax进行求导，只不过举了逻辑回归的例子。
+
+$\frac{\partial}{\partial{\theta_j}}l(\theta)=\sum_{i=1}^{m}(y^{(i)}-h_\theta(x^{(i)}))x^{(i)}_j$
+
+然后逐步返回计算网络中C对各个参数的导数，<u>**注意，只对一个参数，就看这一路，不用管其他支路**</u>。
+$$
+\begin{align}
+&\frac{\partial C}{\partial b_1}=\frac{\partial C}{\partial y_4}\frac{\partial y_4}{\partial z_4}\frac{\partial z_4}{\partial x_4}\frac{\partial x_4}{\partial z_3}\frac{\partial z_3}{\partial x_3}\frac{\partial x_3}{\partial z_2}\frac{\partial z_2}{\partial x_2}\frac{\partial x_2}{\partial z_1}\frac{\partial z_1}{\partial b_1}\\
+&=\frac{\partial C}{\partial y_4}\sigma'\left(z_4\right)w_4\sigma'\left(z_3\right)w_3\sigma'\left(z_2\right)w_2\sigma'\left(z_1\right)
+\end{align}
+$$
+再进行移动，这就是反向传播的精髓，这里是举了逻辑回归的例子，**注意最后的公式中代入的值，其实就是训练数据输入和输出的值，如下面的$x^{(i)}$和$y^{(i)}$。**
+
+$\theta_j=\theta_j+\alpha\sum_{i=1}^{m}(y^{(i)}-h_\theta(x^{(i)}))x^{(i)}_j=\theta_j+\alpha\sum_{i=1}^{m}(y^{(i)}-\frac{1}{1+e^{-{\theta^T}{x^{(i)}}}})x^{(i)}_j$
+
+
+
 ##安装
 ```linux
 conda create -n tf35 python=3.5
@@ -10,9 +27,9 @@ pip install --upgrade --ignore-installed tensorflow
 
 ##概念
 
-<u>**在图的构建阶段，设置初始值，然后设置梯度更新方法，最后设置`training_op`。**</u>
-<u>**然后在执行阶段，利用循环执行`sess.run(training_op)`就可以不断更新迭代了，此时不用考虑图中的初始值。**</u>
-<u>**最后用`best_theta.eval`把参数取出来即可。此外还有一个measure model的指标比如mse，因为这个指标是对所有样本而言的，常和tf.reduce_mean搭配使用**</u>
+**<u>在图的构建阶段，设置初始值，然后设置梯度更新方法，最后设置`training_op`。</u>**
+**<u>然后在执行阶段，利用循环执行`sess.run(training_op)`就可以不断更新迭代了，此时不用考虑图中的初始值。</u>**
+**<u>最后用`best_theta.eval`把参数取出来即可。此外还有一个measure model的指标比如mse，因为这个指标是对所有样本而言的，常和tf.reduce_mean搭配使用</u>**
 
 ### 构造阶段和执行阶段
 A TensorFlow program is typically split into two parts: the first part builds a computation graph (this is called the construction phase), and the second part runs it (this is the execution phase).
@@ -77,6 +94,65 @@ sess.run(training_op,feed_dict={X:X_batch,y:y_batch}) #每次的训练数据X和
 `f.eval()` is equivalent to calling `tf.get_default_session().run(f)`或`sess.run(f)`。
 
 ##常用函数
+
+### `functools.partial`
+
+当函数的参数个数太多，需要简化时，使用`functools.partial`可以创建一个新的函数，这个新函数可以固定住原函数的部分参数，从而在调用时更简单。
+
+Python的`functools`模块提供了很多有用的功能，其中一个就是偏函数（Partial function）。要注意，这里的偏函数和数学意义上的偏函数不一样。
+
+在介绍函数参数的时候，我们讲到，通过设定参数的默认值，可以降低函数调用的难度。而偏函数也可以做到这一点。举例如下：
+
+`int()`函数可以把字符串转换为整数，当仅传入字符串时，`int()`函数默认按十进制转换：
+
+```
+>>> int('12345')
+12345
+
+```
+
+但`int()`函数还提供额外的`base`参数，默认值为`10`。如果传入`base`参数，就可以做N进制的转换：
+
+```
+>>> int('12345', base=8)
+5349
+>>> int('12345', 16)
+74565
+
+```
+
+假设要转换大量的二进制字符串，每次都传入`int(x, base=2)`非常麻烦，于是，我们想到，可以定义一个`int2()`的函数，默认把`base=2`传进去：
+
+```
+def int2(x, base=2):
+    return int(x, base)
+
+```
+
+这样，我们转换二进制就非常方便了：
+
+```
+>>> int2('1000000')
+64
+>>> int2('1010101')
+85
+
+```
+
+`functools.partial`就是帮助我们创建一个偏函数的，不需要我们自己定义`int2()`，可以直接使用下面的代码创建一个新的函数`int2`：
+
+```
+>>> import functools
+>>> int2 = functools.partial(int, base=2)
+>>> int2('1000000')
+64
+>>> int2('1010101')
+85
+
+```
+
+所以，简单总结`functools.partial`的作用就是，把一个函数的某些参数给固定住（也就是设置默认值），返回一个新的函数，调用这个新函数会更简单。
+
 ### `np.random.randint`
 low、high、size三个参数。默认high是None,如果只有low，那范围就是[0,low)。如果有high，范围就是[low,high)。
 ```linux
@@ -161,6 +237,26 @@ array([1, 1, 1])
 >>> np.argmax(a, axis=1)
 array([2, 2])
 ```
+
+###`np.random.permutation`
+
+Randomly permute a sequence, or return a permuted range.
+
+```
+>>> np.random.permutation(10)
+array([1, 7, 4, 3, 0, 9, 2, 5, 8, 6])
+
+>>> np.random.permutation([1, 4, 9, 12, 15])
+array([15,  1,  9,  4, 12])
+```
+
+###`np.array_split`
+Split an array into multiple sub-arrays.
+```python
+>>> x = np.arange(8.0)
+>>> np.array_split(x, 3)
+    [array([ 0.,  1.,  2.]), array([ 3.,  4.,  5.]), array([ 6.,  7.])]
+```
 ### `tf.matmul`
 Multiplies matrix `a` by matrix `b`, producing `a` * `b`.
 
@@ -231,6 +327,127 @@ with tf.Session() as sess:
 
 解释：因为A张量里面的第一个元素的最大值的标签是0，第二个元素的最大值的标签是1.。但是实际的确是1和1.所以输出就是False 和True。如果把K改成2，那么第一个元素的前面2个最大的元素的位置是0，1，第二个的就是1，2。实际结果是1和1。包含在里面，所以输出结果就是True 和True.如果K的值大于张量A的列，那就表示输出结果都是true
 
+###`tf.layers.dense`
+
+构建一个密集的图层。以神经元数量和激活函数作为参数。
+
+This layer implements the operation: `outputs = activation(inputs.kernel + bias)` Where `activation` is the activation function passed as the `activation` argument (if not `None`), `kernel`is a weights matrix created by the layer, and `bias` is a bias vector created by the layer (only if `use_bias` is `True`).
+
+### `tf.placeholder`和`tf.placeholder_with_default`
+
+`tf.placeholder`插入一个坐等 **被feed_dict** 的 `tensor占位符` 。
+
+> tf.placeholder (dtype, shape=None, name=None)
+
+```
+import tensorflow as tf
+
+x = tf.placeholder(dtype=tf.int32)
+print x
+with tf.Session() as sess:
+    print sess.run(x, feed_dict={x:[10, 20]})123456
+```
+
+```
+Tensor("Placeholder:0", dtype=int32)
+
+[10 20]
+```
+
+`tf.placeholder_with_default`与 `tf.placeholder` 不同的是，这里如果 未 被feed_dict，并不会 打印报错，而是打印出 默认数据。
+
+> tf.placeholder_with_default (input, shape, name=None)
+
+```
+import tensorflow as tf
+
+x = tf.placeholder_with_default(input=[3, 3], shape=(2,))
+print x
+with tf.Session() as sess:
+    print sess.run(x)
+    print sess.run(x, feed_dict={x:[10, 20]})
+# 占位符 未 被feed_dict，打印默认输出
+[3 3]
+
+# 占位符 被feed_dict 了，打印 所被feed_dict 的内容
+[10 20]
+```
+
+### `tf.layers.batch_normalization`
+
+在网络中加入batch normalization的功能。
+
+注意在tf.layers.dense之后使用，因为需要使用`tf.layers.batch_normalization`函数归一化层的输出，传递归一化后的值给激活函数。
+
+### `tf.nn.elu`
+
+Computes exponential linear: `exp(features) - 1` if < 0,`features` otherwise.
+
+### `tf.control_dependencies`
+
+**<u>执行某些`op,tensor`之前，某些`op,tensor`得首先被运行。</u>**
+
+```python
+with tf.name_scope("train"):
+    optimizer = tf.train.GradientDescentOptimizer(learning_rate)
+    extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+    with tf.control_dependencies(extra_update_ops):
+        training_op = optimizer.minimize(loss)
+sess.run(training_op, feed_dict={training: True, X: X_batch, y: y_batch})
+```
+
+**Note:** when training, the moving_mean and moving_variance need to be updated. By default the update ops are placed in `tf.GraphKeys.UPDATE_OPS`, so they need to be added as a dependency to the `train_op`. For example:
+
+```python
+update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+with tf.control_dependencies(update_ops):
+    train_op = optimizer.minimize(loss)
+```
+
+###`tf.get_collection`
+从一个集合中取出全部变量，返回的是一个列表。
+The list of values in the collection with the given name, or an empty list if no value has been added to that collection. The list contains the values in the order under which they were collected.
+
+### `tf.clip_by_value`
+
+tf.clip_by_value(A, min, max)：输入一个张量A，把A中的每一个元素的值都压缩在min和max之间。小于min的让它等于min，大于max的元素的值等于max。
+
+###`tf.train.exponential_decay`
+
+Applies exponential decay to the learning rate.
+
+When training a model, it is often recommended to lower the learning rate as the training progresses. This function applies an exponential decay function to a provided initial learning rate. It requires a `global_step` value to compute the decayed learning rate. You can just pass a TensorFlow variable that you increment at each training step.
+
+接着调用minimize函数，则会将global_step自动加一: Optional `Variable` to increment by one after the variables have been updated.
+
+###`tf.add_n`
+
+Adds all input tensors element-wise. 就是将tensor进行一一相加。
+
+```python
+import tensorflow as tf;  
+import numpy as np;  
+  
+input1 = tf.constant([1.0, 2.0, 3.0])  
+input2 = tf.Variable(tf.random_uniform([3]))  
+output = tf.add_n([input1, input2])  
+  
+with tf.Session() as sess:  
+    sess.run(tf.initialize_all_variables())  
+    print sess.run(input1 + input2)  
+    print sess.run(output)  
+
+输出：[ 1.68921876  2.73008633  3.04061747]
+[ 1.68921876  2.73008633  3.04061747]
+```
+
+###`tf.layers.dropout`
+
+**<u>J在构建阶段来看，就像是多加了一层，套在需要dropout的层上。</u>**
+
+Applies Dropout to the input.
+
+Dropout consists in randomly setting a fraction `rate` of input units to 0 at each update during training time, which helps prevent overfitting. The units that are kept are scaled by `1 / (1 - rate)`, so that their sum is unchanged at training time and inference time.
 
 ## 数据标准化
 
@@ -471,7 +688,7 @@ tensorboard --logdir tf_logs/
 ```
 
 
-**<u>J若只有这两句，那么就是会只保存图</u>**
+**<u>J若在程序最后只有这两句，那么就是会只保存图。J我认为这是一个挺好的方法</u>**
 ```python
 file_writer = tf.summary.FileWriter("logs/relu6", tf.get_default_graph())
 file_writer.close()
@@ -659,13 +876,324 @@ file_writer = tf.summary.FileWriter("logs/relu9", tf.get_default_graph())
 file_writer.close()
 ```
 
+## 优化器(optimizer)
 
+###Adam Optimization
+
+加快训练的技巧之一是使用更快的优化器。**<u>建议采用Adam Optimization</u>**。
+
+```python
+optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
+```
+
+除此之外，还有四种方式：
+
+So far we have seen four ways to speed up training (and reach a better solution):
+
+- applying a good initialization strategy for the connection weights
+
+- using a good activation function
+
+- using Batch Normalization
+
+- reusing parts of a pretrained network
+
+### Learning Rate Scheduling
+
+####意义
+However, you can do better than a constant learning rate: if you start with a high learning rate and then reduce it once it stops making fast progress, you can reach a good solution faster than with the optimal constant learning rate.
+
+![](picture/learning rate.png)
+
+####注意事项
+
+- 推荐使用Exponential scheduling，因为易于实现：`decayed_learning_rate = learning_rate *                        decay_rate ^ (global_step / decay_steps)`
+- 对于一些优化器，本身已经自带衰减学习速率的效果。Since AdaGrad, RMSProp, and Adam optimization automatically reduce the learning rate during training, it is not necessary to add an extra learning schedule. For other optimization algorithms, using exponential decay or performance scheduling can
+  considerably speed up convergence.
+  
+####代码
+
+核心代码如下：
+
+```python
+with tf.name_scope("train"):       # not shown in the book
+    initial_learning_rate = 0.1
+    decay_steps = 10000
+    decay_rate = 1/10
+    global_step = tf.Variable(0, trainable=False, name="global_step")
+    learning_rate = tf.train.exponential_decay(initial_learning_rate, global_step,
+                                               decay_steps, decay_rate)
+    optimizer = tf.train.MomentumOptimizer(learning_rate, momentum=0.9)
+    training_op = optimizer.minimize(loss, global_step=global_step)
+```
+
+```python
+reset_graph()
+
+n_inputs = 28 * 28  # MNIST
+n_hidden1 = 300
+n_hidden2 = 50
+n_outputs = 10
+
+X = tf.placeholder(tf.float32, shape=(None, n_inputs), name="X")
+y = tf.placeholder(tf.int64, shape=(None), name="y")
+
+with tf.name_scope("dnn"):
+    hidden1 = tf.layers.dense(X, n_hidden1, activation=tf.nn.relu, name="hidden1")
+    hidden2 = tf.layers.dense(hidden1, n_hidden2, activation=tf.nn.relu, name="hidden2")
+    logits = tf.layers.dense(hidden2, n_outputs, name="outputs")
+
+with tf.name_scope("loss"):
+    xentropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=logits)
+    loss = tf.reduce_mean(xentropy, name="loss")
+
+with tf.name_scope("eval"):
+    correct = tf.nn.in_top_k(logits, y, 1)
+    accuracy = tf.reduce_mean(tf.cast(correct, tf.float32), name="accuracy")
+    
+with tf.name_scope("train"):       # not shown in the book
+    initial_learning_rate = 0.1
+    decay_steps = 10000
+    decay_rate = 1/10
+    global_step = tf.Variable(0, trainable=False, name="global_step")
+    learning_rate = tf.train.exponential_decay(initial_learning_rate, global_step,
+                                               decay_steps, decay_rate)
+    optimizer = tf.train.MomentumOptimizer(learning_rate, momentum=0.9)
+    training_op = optimizer.minimize(loss, global_step=global_step)
+    
+init = tf.global_variables_initializer()
+saver = tf.train.Saver()
+
+n_epochs = 5
+batch_size = 50
+
+with tf.Session() as sess:
+    init.run()
+    for epoch in range(n_epochs):
+        for iteration in range(mnist.train.num_examples // batch_size):
+            X_batch, y_batch = mnist.train.next_batch(batch_size)
+            sess.run(training_op, feed_dict={X: X_batch, y: y_batch})
+        accuracy_val = accuracy.eval(feed_dict={X: mnist.test.images,
+                                                y: mnist.test.labels})
+        print(epoch, "Test accuracy:", accuracy_val)
+
+    save_path = saver.save(sess, "./my_model_final.ckpt")
+```
+
+## Avoiding Overfitting Through Regularization
+
+一共介绍了五种方法。
+
+### Early Stopping
+
+One way to implement this with TensorFlow is to evaluate the model on a validation set at regular intervals (e.g., every 50 steps), and save a “winner” snapshot if it outperforms previous “winner” snapshots. Count the number of steps since the last “winner” snapshot was saved, and interrupt training when this number reaches some limit (e.g., 2,000 steps). Then restore the last “winner” snapshot.
+
+### ℓ1 and ℓ2 Regularization
+
+####原理
+
+原理方面具体可参加machine learning中的关于L1，L2范数的笔记。
+
+**解决过拟合可以从两个方面入手，一是减少模型复杂度，一是增加训练集个数**。而正则化就是减少模型复杂度的一个方法。
+
+**由于模型的参数个数一般是由人为指定和调节的，所以正则化常常是用来限制模型参数值不要过大，也被称为惩罚项。一般是在目标函数(经验风险)中加上一个正则化项**。**而这个正则化项一般会采用L1范数或者L2范数。**
+
+$J(\theta) = \frac{1}{2m} \left( \sum_{i=1}^{m}  (h(x^{(i)}) – y^{(i)})^2 + \lambda \sum_{j=1}^{n} \theta_j^2 \right)$
+
+**注意这里并没有指定是逻辑回归的正则化情况，给出的是一个一般情况下的正则化**，根据惯例，**我们不对**$\theta_0$**进行惩罚,所以最后一项$j$从1开始。**其中$\lambda$叫正则化参数（Regularization Parameter）。如果正则化参数太大，则会把所有参数最小化，导致近似直线，造成欠拟合。
+
+**L1会趋向于产生少量的特征，而其他的特征都是0，而L2会选择更多的特征，这些特征都会接近于0。L1在特征选择时候非常有用，而L2就只是一种规则化而已**。
+
+**<u>L1范数：表示为向量中各个元素绝对值之和。</u>**
+
+**<u>L2范数：表示为向量中各个元素的平方和然后求平方根。</u>**
+
+#### 代码
+
+Tensorflow提供了代码，帮助计算正则化，此外需要将正则化的loss与原本的loss进行汇总，才能进一步更新，核心代码如下：
+
+```python
+my_dense_layer = partial(
+    tf.layers.dense, activation=tf.nn.relu,
+    kernel_regularizer=tf.contrib.layers.l1_regularizer(scale))
+
+with tf.name_scope("loss"):                                     # not shown in the book
+    xentropy = tf.nn.sparse_softmax_cross_entropy_with_logits(  # not shown
+        labels=y, logits=logits)                                # not shown
+    base_loss = tf.reduce_mean(xentropy, name="avg_xentropy")   # not shown
+    reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+    loss = tf.add_n([base_loss] + reg_losses, name="loss")
+```
+
+```python
+from functools import partial
+reset_graph()
+
+n_inputs = 28 * 28  # MNIST
+n_hidden1 = 300
+n_hidden2 = 50
+n_outputs = 10
+
+X = tf.placeholder(tf.float32, shape=(None, n_inputs), name="X")
+y = tf.placeholder(tf.int64, shape=(None), name="y")
+
+scale = 0.001
+
+my_dense_layer = partial(
+    tf.layers.dense, activation=tf.nn.relu,
+    kernel_regularizer=tf.contrib.layers.l1_regularizer(scale))
+
+with tf.name_scope("dnn"):
+    hidden1 = my_dense_layer(X, n_hidden1, name="hidden1")
+    hidden2 = my_dense_layer(hidden1, n_hidden2, name="hidden2")
+    logits = my_dense_layer(hidden2, n_outputs, activation=None,
+                            name="outputs")
+
+with tf.name_scope("loss"):                                     # not shown in the book
+    xentropy = tf.nn.sparse_softmax_cross_entropy_with_logits(  # not shown
+        labels=y, logits=logits)                                # not shown
+    base_loss = tf.reduce_mean(xentropy, name="avg_xentropy")   # not shown
+    reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+    loss = tf.add_n([base_loss] + reg_losses, name="loss")
+
+
+with tf.name_scope("eval"):
+    correct = tf.nn.in_top_k(logits, y, 1)
+    accuracy = tf.reduce_mean(tf.cast(correct, tf.float32), name="accuracy")
+
+learning_rate = 0.01
+
+with tf.name_scope("train"):
+    optimizer = tf.train.GradientDescentOptimizer(learning_rate)
+    training_op = optimizer.minimize(loss)
+
+init = tf.global_variables_initializer()
+saver = tf.train.Saver()
+
+n_epochs = 20
+batch_size = 200
+
+with tf.Session() as sess:
+    init.run()
+    for epoch in range(n_epochs):
+        for iteration in range(mnist.train.num_examples // batch_size):
+            X_batch, y_batch = mnist.train.next_batch(batch_size)
+            sess.run(training_op, feed_dict={X: X_batch, y: y_batch})
+        accuracy_val = accuracy.eval(feed_dict={X: mnist.test.images,
+                                                y: mnist.test.labels})
+        print(epoch, "Test accuracy:", accuracy_val)
+
+    save_path = saver.save(sess, "./my_model_final.ckpt")
+
+```
+
+### Dropout
+
+####原理
+
+除了输出层的神经元，其他神经元都有50%的机会被丢弃。
+
+It is a fairly simple algorithm: at every training step, **<u>every neuron (including the input neurons but excluding the output neurons) has a probability p of being temporarily “dropped out,”</u>** meaning it will be entirely ignored during this training step, but it may be active during the next step. **<u>The hyperparameter p is called the dropout rate, and it is typically set to 50%.</u>** After training, neurons don’t get dropped anymore. 
+
+涉及到权值的修正：<u>More generally, we need to multiply each input connection weight by the keep probability (1 – p) after training. Alternatively, we can divide each neuron’s output by the keep probability during training (these alternatives are not perfectly equivalent, but they work equally well).</u>
+
+####代码
+
+Tensorflow实现的是后一种就是对每次的训练进行除以保存率，放大每个神经元的输出。<u>就像是在需要dropout的层上，外加一层，然后设置训练时是training，而测试时会关闭为false。</u>核心代码如下：
+
+```python
+training = tf.placeholder_with_default(False, shape=(), name='training')
+
+dropout_rate = 0.5  # == 1 - keep_prob
+X_drop = tf.layers.dropout(X, dropout_rate, training=training)
+
+with tf.name_scope("dnn"):
+    hidden1 = tf.layers.dense(X_drop, n_hidden1, activation=tf.nn.relu,
+                              name="hidden1")
+    hidden1_drop = tf.layers.dropout(hidden1, dropout_rate, training=training)
+    hidden2 = tf.layers.dense(hidden1_drop, n_hidden2, activation=tf.nn.relu,
+                              name="hidden2")
+    hidden2_drop = tf.layers.dropout(hidden2, dropout_rate, training=training)
+    logits = tf.layers.dense(hidden2_drop, n_outputs, name="outputs")
+```
+
+```python
+
+reset_graph()
+
+X = tf.placeholder(tf.float32, shape=(None, n_inputs), name="X")
+y = tf.placeholder(tf.int64, shape=(None), name="y")
+
+training = tf.placeholder_with_default(False, shape=(), name='training')
+
+dropout_rate = 0.5  # == 1 - keep_prob
+X_drop = tf.layers.dropout(X, dropout_rate, training=training)
+
+with tf.name_scope("dnn"):
+    hidden1 = tf.layers.dense(X_drop, n_hidden1, activation=tf.nn.relu,
+                              name="hidden1")
+    hidden1_drop = tf.layers.dropout(hidden1, dropout_rate, training=training)
+    hidden2 = tf.layers.dense(hidden1_drop, n_hidden2, activation=tf.nn.relu,
+                              name="hidden2")
+    hidden2_drop = tf.layers.dropout(hidden2, dropout_rate, training=training)
+    logits = tf.layers.dense(hidden2_drop, n_outputs, name="outputs")
+    
+with tf.name_scope("loss"):
+    xentropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=logits)
+    loss = tf.reduce_mean(xentropy, name="loss")
+
+with tf.name_scope("train"):
+    optimizer = tf.train.MomentumOptimizer(learning_rate, momentum=0.9)
+    training_op = optimizer.minimize(loss)    
+
+with tf.name_scope("eval"):
+    correct = tf.nn.in_top_k(logits, y, 1)
+    accuracy = tf.reduce_mean(tf.cast(correct, tf.float32))
+    
+init = tf.global_variables_initializer()
+saver = tf.train.Saver()
+
+n_epochs = 20
+batch_size = 50
+
+with tf.Session() as sess:
+    init.run()
+    for epoch in range(n_epochs):
+        for iteration in range(mnist.train.num_examples // batch_size):
+            X_batch, y_batch = mnist.train.next_batch(batch_size)
+            sess.run(training_op, feed_dict={training: True, X: X_batch, y: y_batch})
+        acc_test = accuracy.eval(feed_dict={X: mnist.test.images, y: mnist.test.labels})
+        print(epoch, "Test accuracy:", acc_test)
+
+    save_path = saver.save(sess, "./my_model_final.ckpt")
+```
+
+### Max-Norm Regularization
+
+####原理
+
+**在每一次的training step之后，计算权值，使得每个神经元的权值满足$\Vert w \Vert_2 < r$。**
+
+因为书中写的有点复杂，节约时间就不看代码了。需要用到的时候，再返回去细看。
+
+### Data Augmentation
+
+通过现有的数据，修改生成新的数据。
+
+![](picture/data augmentation.png)
+
+## 推荐的常用配置
+
+**<u>大多数情况下，该优化配置都表现良好。</u>**
+
+![](picture/practical guideline.png)
 
 ##教程
+
 https://zhuanlan.zhihu.com/p/35515805
 
 # References
 
 - [Feature Scaling with scikit-learn](http://benalexkeen.com/feature-scaling-with-scikit-learn/)
 - [Can z-scores be used for data that is not Normally distributed](https://www.reddit.com/r/math/comments/zqcei/can_zscores_be_used_for_data_that_is_not_normally/)
-- [Chapter 9 – Up and running with TensorFlow](https://blog.csdn.net/nockinonheavensdoor/article/details/78941778)
+- [配套代码](https://github.com/ageron/handson-ml)
