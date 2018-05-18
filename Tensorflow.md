@@ -65,7 +65,7 @@ After the graph has been launched in a session, an `Operation` can be executed b
 ###张量就是多维数组
 每一个op使用0个或多个Tensor, 执行一些计算，并生成0个或多个Tensor. 一个tensor就是一种多维数组。
 
-###placeholder node占位符节点也是一种op，<u>先占位后赋值</u>
+###placeholder node占位符节点也是一种op，<u>先占位后赋值</u>（<u>注意无论是eval还是run都需要将参数feed_dict送入；另外eval只能对tensor对象解析，而其他list等需要用run</u>）
 `tf.placeholder()` 操作(operation)允许你定义一种必须提供值的 tensor。
 
 <u>To create a placeholder node, you must call the placeholder() function and specify the output tensor’s data type. Optionally, you can also specify its shape, if you want to enforce it. If you specify None for a dimension, it means “any size.”</u>
@@ -158,6 +158,21 @@ low、high、size三个参数。默认high是None,如果只有low，那范围就
 ```linux
 >>> np.random.randint(2, size=10)
 array([1, 0, 0, 0, 1, 1, 0, 0, 1, 0])
+```
+
+### `np.random.rand`
+
+`numpy.random.rand`(*d0*, *d1*, *...*, *dn*)
+
+Random values in a given shape.
+
+Create an array of the given shape and populate it with random samples from a uniform distribution over `[0, 1)`.
+
+```linux
+>>> np.random.rand(3,2)
+array([[ 0.14022471,  0.96360618],  #random
+       [ 0.37601032,  0.25528411],  #random
+       [ 0.49313049,  0.94909878]]) #random
 ```
 
 ### `np.ceil`
@@ -257,7 +272,23 @@ Split an array into multiple sub-arrays.
 >>> np.array_split(x, 3)
     [array([ 0.,  1.,  2.]), array([ 3.,  4.,  5.]), array([ 6.,  7.])]
 ```
+###`np.linspace`
+
+`numpy.linspace`(*start*, *stop*, *num=50*, *endpoint=True*, *retstep=False*, *dtype=None*)
+
+Returns *num* evenly spaced samples, calculated over the interval [*start*, *stop*]. 
+
+返回由num个数字分割点组成的一个array。<u>J常用于作图中。</u>
+
+```linux
+>>> np.linspace(2.0, 3.0, num=5)
+array([ 2.  ,  2.25,  2.5 ,  2.75,  3.  ])
+>>> np.linspace(2.0, 3.0, num=5, endpoint=False)
+array([ 2. ,  2.2,  2.4,  2.6,  2.8])
+```
+
 ### `tf.matmul`
+
 Multiplies matrix `a` by matrix `b`, producing `a` * `b`.
 
 ### `tf.matrix_inverse`
@@ -332,6 +363,10 @@ with tf.Session() as sess:
 构建一个密集的图层。以神经元数量和激活函数作为参数。
 
 This layer implements the operation: `outputs = activation(inputs.kernel + bias)` Where `activation` is the activation function passed as the `activation` argument (if not `None`), `kernel`is a weights matrix created by the layer, and `bias` is a bias vector created by the layer (only if `use_bias` is `True`).
+
+**<u>J常用来控制输出的个数，其形状如下图所示，每一个输入都对该层中的输出单元有输入，所以叫全连接。</u>**
+
+![](picture/fully-connected.png)
 
 ### `tf.placeholder`和`tf.placeholder_with_default`
 
@@ -448,6 +483,91 @@ with tf.Session() as sess:
 Applies Dropout to the input.
 
 Dropout consists in randomly setting a fraction `rate` of input units to 0 at each update during training time, which helps prevent overfitting. The units that are kept are scaled by `1 / (1 - rate)`, so that their sum is unchanged at training time and inference time.
+
+###`tf.nn.conv2d`
+
+Computes a 2-D convolution given 4-D `input` and `filter` tensors.
+
+返回一个 `Tensor`. Has the same type as `input`
+
+### `tf.layer.conv2d`
+
+与上面相同，只是the default `activation` is now `None` instead of `tf.nn.relu`
+
+- **filters**: Integer, the dimensionality of the output space (i.e. the number of filters in the convolution).
+- **kernel_size**: An integer or tuple/list of 2 integers, specifying the height and width of the 2D convolution window. Can be a single integer to specify the same value for all spatial dimensions.
+
+###`tf.nn.max_pool`
+
+Performs the max pooling on the input.
+
+The ksize argument contains the kernel shape along all four dimensions of the input tensor: [batch size, height, width, channels]. TensorFlow currently does not support pooling over multiple instances, so the first element of ksize must be equal to 1. Moreover, it does not support pooling over both the spatial dimensions (height and width) and the depth dimension, so either ksize[1] and ksize[2] must both be equal to 1, or ksize[3] must be equal to 1.
+
+### `tf.reshape`
+
+**<u>tensor的形状都是从末尾开始堆积的，也就是表示最内侧。</u>**比如下面的3表示最内侧，2表示最外侧。-1 can also be used to infer the shape。
+
+```python
+# tensor 't' is [1, 2, 3, 4, 5, 6, 7, 8, 9]
+# -1 is inferred to be 3:
+reshape(t, [ 2, -1, 3]) ==> [[[1, 1, 1],
+                              [2, 2, 2],
+                              [3, 3, 3]],
+                             [[4, 4, 4],
+                              [5, 5, 5],
+                              [6, 6, 6]]]
+```
+
+### `tf.transpose`
+
+Transposes `a`. Permutes the dimensions according to `perm` .
+
+```python
+X_batch = np.array([
+        # t = 0      t = 1 
+        [[0, 1, 2], [9, 8, 7]], # instance 1  #最内是3，即input
+        [[3, 4, 5], [0, 0, 0]], # instance 2  #次内是2，即n_step
+        [[6, 7, 8], [6, 5, 4]], # instance 3  #最外是4，即mini batch size
+        [[9, 0, 1], [3, 2, 1]], # instance 4
+    ])
+X_test = tf.transpose(X, perm=[1, 0, 2])
+[[[0. 1. 2.]
+  [3. 4. 5.]
+  [6. 7. 8.]
+  [9. 0. 1.]]
+ [[9. 8. 7.]
+  [0. 0. 0.]
+  [6. 5. 4.]
+  [3. 2. 1.]]]
+
+具体计算时是这么计算的，先将各个元素的坐标写出来，然后根据transpose的规则，对各个元素坐标进行变化，然后组合起来：
+[[[0, 1, 2], 
+ [9, 8, 7]], 
+[[3, 4, 5], 
+ [0, 0, 0]], 
+[[6, 7, 8],
+ [6, 5, 4]], 
+[[9, 0, 1],
+ [3, 2, 1]]]
+比如上面的4*2*3,那么左上角是0*0*0，而倒数第二行的9是3*0*0。
+那么经过transpose后，就会变成2*4*3，意味着第一个维度和第二个维度进行互换，变成了0*0*0和0*3*0。
+
+```
+
+###`tf.unstack`
+
+Unpacks the given dimension of a rank-`R` tensor into rank-`(R-1)` tensors. 降一个维度。
+
+```pyhon
+[array([[0., 1., 2.],
+       [3., 4., 5.],
+       [6., 7., 8.],
+       [9., 0., 1.]], dtype=float32), 
+array([[9., 8., 7.],
+       [0., 0., 0.],
+       [6., 5., 4.],
+       [3., 2., 1.]], dtype=float32)]
+```
 
 ## 数据标准化
 
