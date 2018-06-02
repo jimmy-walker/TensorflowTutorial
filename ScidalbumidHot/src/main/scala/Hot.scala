@@ -198,7 +198,7 @@ object Hot extends Serializable{
                                       .toDF("hot_mean", "hot_std", "burst_mean", "burst_std", "hot_coefficient", "hot_min")
 
     df_save_value.createOrReplaceTempView("savevalue_table")
-    val sql_save_value_create = s""""
+    val sql_save_value_create = """
 create table if not exists temp.jimmy_dt_save_value
 (
         hot_mean DOUBLE,
@@ -213,15 +213,15 @@ row format delimited fields terminated by '|' lines terminated by '\n' stored as
 """
     spark.sql(sql_save_value_create)
 
-    val sql_save_value = s""""
-INSERT OVERWRITE TABLE temp.jimmy_dt_save_value PARTITION(cdt='$date_end') select hot_mean, hot_std, burst_mean, burst_std, hot_coefficient, hot_min from savevalue_table"
+    val sql_save_value = s"""
+INSERT OVERWRITE TABLE temp.jimmy_dt_save_value PARTITION(cdt='$date_end') select hot_mean, hot_std, burst_mean, burst_std, hot_coefficient, hot_min from savevalue_table
 """
     spark.sql(sql_save_value)
 
     df_scid.persist()
     df_scid.createOrReplaceTempView("table_scid")
     //it will be used later
-    val sql_scid_save_create = s"""
+    val sql_scid_save_create = """
 create table if not exists temp.jimmy_dt_hot_score
 (
         scid_albumid string,
@@ -233,7 +233,7 @@ row format delimited fields terminated by '|' lines terminated by '\n' stored as
     spark.sql(sql_scid_save_create)
 
     val sql_scid_save = s"""
-INSERT OVERWRITE TABLE temp.jimmy_dt_hot_score PARTITION(cdt='$date_end') select scid_albumid, hot from table_scid"
+INSERT OVERWRITE TABLE temp.jimmy_dt_hot_score PARTITION(cdt='$date_end') select scid_albumid, hot from table_scid
 """
     spark.sql(sql_scid_save)
     //unpersist to gain memory
@@ -259,7 +259,7 @@ where a.dt = '$date_end' and a.mixsongid=b.scid_albumid
 
     df_sn_sep.createOrReplaceTempView("table_sep")
     //it will be used later
-    val sql_sn_sep_save_create = s"""
+    val sql_sn_sep_save_create = """
 create table if not exists temp.jimmy_dt_sn_sep
 (
         mixsongid string,
@@ -275,7 +275,7 @@ row format delimited fields terminated by '|' lines terminated by '\n' stored as
     spark.sql(sql_sn_sep_save_create)
 
     val sql_sn_sep_save = s"""
-INSERT OVERWRITE TABLE temp.jimmy_dt_sn_sep PARTITION(cdt='$date_end') select mixsongid, albumname, song, kind, singer, hot from table_sep"
+INSERT OVERWRITE TABLE temp.jimmy_dt_sn_sep PARTITION(cdt='$date_end') select mixsongid, albumname, song, kind, singer, hot from table_sep
 """
     //remember that we should select the item in the hive item order!!!!!!!!!!!!!!!
     spark.sql(sql_sn_sep_save)
@@ -287,7 +287,7 @@ INSERT OVERWRITE TABLE temp.jimmy_dt_sn_sep PARTITION(cdt='$date_end') select mi
 
     //it will be used to check
     df_burst_name.createOrReplaceTempView("table_burst_name")
-    val df_burst_name_save_create = s"""
+    val df_burst_name_save_create = """
 create table if not exists temp.jimmy_dt_burst_name
 (
         scid_albumid string,
@@ -304,7 +304,7 @@ row format delimited fields terminated by '|' lines terminated by '\n' stored as
     spark.sql(df_burst_name_save_create)
 
     val df_burst_name_save = s"""
-INSERT OVERWRITE TABLE temp.jimmy_dt_burst_name PARTITION(cdt='$date_end') select scid_albumid, burst, hot, song, singer, kind, albumname from table_burst_name"
+INSERT OVERWRITE TABLE temp.jimmy_dt_burst_name PARTITION(cdt='$date_end') select scid_albumid, burst, hot, song, singer, kind, albumname from table_burst_name
 """
     spark.sql(df_burst_name_save)
 

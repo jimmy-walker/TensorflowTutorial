@@ -487,7 +487,7 @@ from temp.jimmy_tag
 
     df_triple.createOrReplaceTempView("search_savetable")
     df_triple.persist()
-    val sql_search_create= s"""
+    val sql_search_create= """
 create table if not exists temp.jimmy_dt_hot_result_mix
 (
 term string,
@@ -536,7 +536,7 @@ group by kw, ivar5
 """
     val df_search_num = spark.sql(sql_search_num)
     df_search_num.createOrReplaceTempView("num_search_savetable")
-    val sql_result_num_create= s"""
+    val sql_result_num_create= """
 create table if not exists temp.jimmy_dt_hot_result_num_mix
 (
 term string,

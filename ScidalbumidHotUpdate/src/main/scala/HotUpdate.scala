@@ -216,7 +216,7 @@ group by dt, scid_albumid
 
     df_cal_save.persist()
     //it will be used later
-    val sql_burst_hot_save_create = s"""
+    val sql_burst_hot_save_create = """
 create table if not exists temp.jimmy_dt_burst_hot_score_update
 (
 scid_albumid string,
@@ -254,7 +254,7 @@ row format delimited fields terminated by '|' lines terminated by '\n' stored as
 
     df_scid.persist()
     df_scid.createOrReplaceTempView("table_scid_update")
-    val sql_scid_save_create = s"""
+    val sql_scid_save_create = """
 create table if not exists temp.jimmy_dt_hot_score_update
 (
         scid_albumid string,
@@ -266,7 +266,7 @@ row format delimited fields terminated by '|' lines terminated by '\n' stored as
     spark.sql(sql_scid_save_create)
 
     val sql_scid_save = s"""
-INSERT OVERWRITE TABLE temp.jimmy_dt_hot_score_update PARTITION(cdt='$date_today', time='$update_time') select scid_albumid, hot from table_scid_update"
+INSERT OVERWRITE TABLE temp.jimmy_dt_hot_score_update PARTITION(cdt='$date_today', time='$update_time') select scid_albumid, hot from table_scid_update
 """
     spark.sql(sql_scid_save)
 
