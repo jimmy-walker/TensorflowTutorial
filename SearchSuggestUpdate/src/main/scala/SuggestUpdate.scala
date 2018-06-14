@@ -116,7 +116,8 @@ object SuggestUpdate extends Serializable{
     //filter and format name
     val df_sn_sep = df_sn.withColumn("song", regexp_replace($"songname", "[ ]*\\([^\\(\\)]*\\)$", ""))
                          .withColumn("kind", regexp_extract($"songname", "\\(([^\\(\\)]*)\\)$", 1))
-                         .withColumnRenamed("choric_singer", "singer") //to eliminate the space effect
+                         .withColumn("singer", regexp_replace($"choric_singer", "[ ]*\\([0-9]*\\)$", "")) //to eliminate the duplicate singer effect
+//                         .withColumnRenamed("choric_singer", "singer") //to eliminate the space effect
     df_sn_sep.persist()
 
     val sql_burst_hot_read = s"select scid_albumid, burst, hot from temp.jimmy_dt_burst_hot_score_update where cdt='$date_today' and time='$update_time'"

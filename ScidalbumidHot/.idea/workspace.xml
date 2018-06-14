@@ -16,8 +16,8 @@
       <file leaf-file-name="pom.xml" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/pom.xml">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="2646">
-              <caret line="98" column="0" lean-forward="false" selection-start-line="98" selection-start-column="0" selection-end-line="99" selection-end-column="10" />
+            <state relative-caret-position="216">
+              <caret line="8" column="0" lean-forward="false" selection-start-line="8" selection-start-column="0" selection-end-line="99" selection-end-column="10" />
               <folding />
             </state>
           </provider>
@@ -26,16 +26,16 @@
       <file leaf-file-name="Hot.scala" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/main/scala/Hot.scala">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="274">
-              <caret line="306" column="47" lean-forward="false" selection-start-line="306" selection-start-column="28" selection-end-line="306" selection-end-column="47" />
+            <state relative-caret-position="3087">
+              <caret line="285" column="50" lean-forward="false" selection-start-line="285" selection-start-column="41" selection-end-line="285" selection-end-column="50" />
               <folding>
                 <element signature="e#57#78#0" expanded="true" />
                 <element signature="e#2214#2363#0" expanded="false" />
                 <element signature="e#2413#2865#0" expanded="false" />
                 <element signature="e#2917#3565#0" expanded="false" />
-                <element signature="e#13008#13573#0" expanded="false" />
-                <element signature="e#13576#14114#0" expanded="false" />
-                <element signature="e#14117#14424#0" expanded="false" />
+                <element signature="e#13159#13724#0" expanded="false" />
+                <element signature="e#13727#14265#0" expanded="false" />
+                <element signature="e#14268#14575#0" expanded="false" />
               </folding>
             </state>
           </provider>
@@ -53,6 +53,10 @@
       <find>over</find>
       <find>jimmy_dt_hot_score</find>
       <find>part</find>
+      <find>window</find>
+      <find>regex</find>
+      <find>table_sep</find>
+      <find>df_sn_sep</find>
     </findStrings>
   </component>
   <component name="GradleLocalSettings">
@@ -105,8 +109,6 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
-      <pane id="Scratches" />
-      <pane id="AndroidView" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -136,8 +138,10 @@
           <select />
         </subPane>
       </pane>
-      <pane id="Scope" />
       <pane id="PackagesPane" />
+      <pane id="AndroidView" />
+      <pane id="Scope" />
+      <pane id="Scratches" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -260,7 +264,6 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="-11" y="-11" width="1942" height="1046" extended-state="6" />
-    <editor active="true" />
     <layout>
       <window_info id="Palette" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
@@ -268,19 +271,19 @@
       <window_info id="Image Layers" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Capture Analysis" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
-      <window_info id="Maven Projects" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.2899568" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.2591716" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Maven Projects" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.2548596" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.2591716" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Capture Tool" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Designer" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.21112311" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.2062635" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="UI Designer" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Theme Preview" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
-      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
+      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Commander" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
@@ -299,6 +302,150 @@
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/pom.xml">
       <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="216">
+          <caret line="8" column="0" lean-forward="false" selection-start-line="8" selection-start-column="0" selection-end-line="99" selection-end-column="10" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/scala/Hot.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="6453">
+          <caret line="285" column="50" lean-forward="false" selection-start-line="285" selection-start-column="41" selection-end-line="285" selection-end-column="50" />
+          <folding>
+            <element signature="e#57#78#0" expanded="true" />
+            <element signature="e#2214#2363#0" expanded="false" />
+            <element signature="e#2413#2865#0" expanded="false" />
+            <element signature="e#2917#3565#0" expanded="false" />
+            <element signature="e#13159#13724#0" expanded="false" />
+            <element signature="e#13727#14265#0" expanded="false" />
+            <element signature="e#14268#14575#0" expanded="false" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pom.xml">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="216">
+          <caret line="8" column="0" lean-forward="false" selection-start-line="8" selection-start-column="0" selection-end-line="99" selection-end-column="10" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/scala/Hot.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="270">
+          <caret line="14" column="30" lean-forward="true" selection-start-line="14" selection-start-column="30" selection-end-line="14" selection-end-column="30" />
+          <folding>
+            <element signature="e#57#78#0" expanded="true" />
+            <element signature="e#2214#2363#0" expanded="false" />
+            <element signature="e#2413#2865#0" expanded="false" />
+            <element signature="e#2917#3565#0" expanded="false" />
+            <element signature="e#13159#13724#0" expanded="false" />
+            <element signature="e#13727#14265#0" expanded="false" />
+            <element signature="e#14268#14575#0" expanded="false" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pom.xml">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="216">
+          <caret line="8" column="0" lean-forward="false" selection-start-line="8" selection-start-column="0" selection-end-line="99" selection-end-column="10" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/scala/Hot.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="432">
+          <caret line="16" column="30" lean-forward="true" selection-start-line="16" selection-start-column="30" selection-end-line="16" selection-end-column="30" />
+          <folding>
+            <element signature="e#57#78#0" expanded="true" />
+            <element signature="e#2214#2363#0" expanded="false" />
+            <element signature="e#2413#2865#0" expanded="false" />
+            <element signature="e#2917#3565#0" expanded="false" />
+            <element signature="e#13159#13724#0" expanded="false" />
+            <element signature="e#13727#14265#0" expanded="false" />
+            <element signature="e#14268#14575#0" expanded="false" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pom.xml">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="2646">
+          <caret line="98" column="0" lean-forward="false" selection-start-line="98" selection-start-column="0" selection-end-line="99" selection-end-column="10" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/scala/Hot.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="405">
+          <caret line="15" column="30" lean-forward="true" selection-start-line="15" selection-start-column="30" selection-end-line="15" selection-end-column="30" />
+          <folding>
+            <element signature="e#57#78#0" expanded="true" />
+            <element signature="e#2214#2363#0" expanded="false" />
+            <element signature="e#2413#2865#0" expanded="false" />
+            <element signature="e#2917#3565#0" expanded="false" />
+            <element signature="e#13159#13724#0" expanded="false" />
+            <element signature="e#13727#14265#0" expanded="false" />
+            <element signature="e#14268#14575#0" expanded="false" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pom.xml">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="2646">
+          <caret line="98" column="0" lean-forward="false" selection-start-line="98" selection-start-column="0" selection-end-line="99" selection-end-column="10" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/scala/Hot.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="7020">
+          <caret line="306" column="52" lean-forward="false" selection-start-line="306" selection-start-column="48" selection-end-line="306" selection-end-column="52" />
+          <folding>
+            <element signature="e#57#78#0" expanded="true" />
+            <element signature="e#2214#2363#0" expanded="false" />
+            <element signature="e#2413#2865#0" expanded="false" />
+            <element signature="e#2917#3565#0" expanded="false" />
+            <element signature="e#13159#13724#0" expanded="false" />
+            <element signature="e#13727#14265#0" expanded="false" />
+            <element signature="e#14268#14575#0" expanded="false" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pom.xml">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="2646">
+          <caret line="98" column="0" lean-forward="false" selection-start-line="98" selection-start-column="0" selection-end-line="99" selection-end-column="10" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/scala/Hot.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="7020">
+          <caret line="306" column="47" lean-forward="false" selection-start-line="306" selection-start-column="28" selection-end-line="306" selection-end-column="47" />
+          <folding>
+            <element signature="e#57#78#0" expanded="true" />
+            <element signature="e#2214#2363#0" expanded="false" />
+            <element signature="e#2413#2865#0" expanded="false" />
+            <element signature="e#2917#3565#0" expanded="false" />
+            <element signature="e#13159#13724#0" expanded="false" />
+            <element signature="e#13727#14265#0" expanded="false" />
+            <element signature="e#14268#14575#0" expanded="false" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pom.xml">
+      <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="2646">
           <caret line="98" column="0" lean-forward="false" selection-start-line="98" selection-start-column="0" selection-end-line="99" selection-end-column="10" />
           <folding />
@@ -314,9 +461,9 @@
             <element signature="e#2214#2363#0" expanded="false" />
             <element signature="e#2413#2865#0" expanded="false" />
             <element signature="e#2917#3565#0" expanded="false" />
-            <element signature="e#13008#13573#0" expanded="false" />
-            <element signature="e#13576#14114#0" expanded="false" />
-            <element signature="e#14117#14424#0" expanded="false" />
+            <element signature="e#13159#13724#0" expanded="false" />
+            <element signature="e#13727#14265#0" expanded="false" />
+            <element signature="e#14268#14575#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -338,9 +485,9 @@
             <element signature="e#2214#2363#0" expanded="false" />
             <element signature="e#2413#2865#0" expanded="false" />
             <element signature="e#2917#3565#0" expanded="false" />
-            <element signature="e#13008#13573#0" expanded="false" />
-            <element signature="e#13576#14114#0" expanded="false" />
-            <element signature="e#14117#14424#0" expanded="false" />
+            <element signature="e#13159#13724#0" expanded="false" />
+            <element signature="e#13727#14265#0" expanded="false" />
+            <element signature="e#14268#14575#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -362,9 +509,9 @@
             <element signature="e#2214#2363#0" expanded="false" />
             <element signature="e#2413#2865#0" expanded="false" />
             <element signature="e#2917#3565#0" expanded="false" />
-            <element signature="e#13008#13573#0" expanded="false" />
-            <element signature="e#13576#14114#0" expanded="false" />
-            <element signature="e#14117#14424#0" expanded="false" />
+            <element signature="e#13159#13724#0" expanded="false" />
+            <element signature="e#13727#14265#0" expanded="false" />
+            <element signature="e#14268#14575#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -386,9 +533,9 @@
             <element signature="e#2214#2363#0" expanded="false" />
             <element signature="e#2413#2865#0" expanded="false" />
             <element signature="e#2917#3565#0" expanded="false" />
-            <element signature="e#13008#13573#0" expanded="false" />
-            <element signature="e#13576#14114#0" expanded="false" />
-            <element signature="e#14117#14424#0" expanded="false" />
+            <element signature="e#13159#13724#0" expanded="false" />
+            <element signature="e#13727#14265#0" expanded="false" />
+            <element signature="e#14268#14575#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -410,9 +557,9 @@
             <element signature="e#2214#2363#0" expanded="false" />
             <element signature="e#2413#2865#0" expanded="false" />
             <element signature="e#2917#3565#0" expanded="false" />
-            <element signature="e#13008#13573#0" expanded="false" />
-            <element signature="e#13576#14114#0" expanded="false" />
-            <element signature="e#14117#14424#0" expanded="false" />
+            <element signature="e#13159#13724#0" expanded="false" />
+            <element signature="e#13727#14265#0" expanded="false" />
+            <element signature="e#14268#14575#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -434,9 +581,9 @@
             <element signature="e#2214#2363#0" expanded="false" />
             <element signature="e#2413#2865#0" expanded="false" />
             <element signature="e#2917#3565#0" expanded="false" />
-            <element signature="e#13008#13573#0" expanded="false" />
-            <element signature="e#13576#14114#0" expanded="false" />
-            <element signature="e#14117#14424#0" expanded="false" />
+            <element signature="e#13159#13724#0" expanded="false" />
+            <element signature="e#13727#14265#0" expanded="false" />
+            <element signature="e#14268#14575#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -458,9 +605,9 @@
             <element signature="e#2214#2363#0" expanded="false" />
             <element signature="e#2413#2865#0" expanded="false" />
             <element signature="e#2917#3565#0" expanded="false" />
-            <element signature="e#13008#13573#0" expanded="false" />
-            <element signature="e#13576#14114#0" expanded="false" />
-            <element signature="e#14117#14424#0" expanded="false" />
+            <element signature="e#13159#13724#0" expanded="false" />
+            <element signature="e#13727#14265#0" expanded="false" />
+            <element signature="e#14268#14575#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -482,9 +629,9 @@
             <element signature="e#2214#2363#0" expanded="false" />
             <element signature="e#2413#2865#0" expanded="false" />
             <element signature="e#2917#3565#0" expanded="false" />
-            <element signature="e#13008#13573#0" expanded="false" />
-            <element signature="e#13576#14114#0" expanded="false" />
-            <element signature="e#14117#14424#0" expanded="false" />
+            <element signature="e#13159#13724#0" expanded="false" />
+            <element signature="e#13727#14265#0" expanded="false" />
+            <element signature="e#14268#14575#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -506,9 +653,9 @@
             <element signature="e#2214#2363#0" expanded="false" />
             <element signature="e#2413#2865#0" expanded="false" />
             <element signature="e#2917#3565#0" expanded="false" />
-            <element signature="e#13008#13573#0" expanded="false" />
-            <element signature="e#13576#14114#0" expanded="false" />
-            <element signature="e#14117#14424#0" expanded="false" />
+            <element signature="e#13159#13724#0" expanded="false" />
+            <element signature="e#13727#14265#0" expanded="false" />
+            <element signature="e#14268#14575#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -530,9 +677,9 @@
             <element signature="e#2214#2363#0" expanded="false" />
             <element signature="e#2413#2865#0" expanded="false" />
             <element signature="e#2917#3565#0" expanded="false" />
-            <element signature="e#13008#13573#0" expanded="false" />
-            <element signature="e#13576#14114#0" expanded="false" />
-            <element signature="e#14117#14424#0" expanded="false" />
+            <element signature="e#13159#13724#0" expanded="false" />
+            <element signature="e#13727#14265#0" expanded="false" />
+            <element signature="e#14268#14575#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -554,33 +701,33 @@
             <element signature="e#2214#2363#0" expanded="false" />
             <element signature="e#2413#2865#0" expanded="false" />
             <element signature="e#2917#3565#0" expanded="false" />
-            <element signature="e#13008#13573#0" expanded="false" />
-            <element signature="e#13576#14114#0" expanded="false" />
-            <element signature="e#14117#14424#0" expanded="false" />
+            <element signature="e#13159#13724#0" expanded="false" />
+            <element signature="e#13727#14265#0" expanded="false" />
+            <element signature="e#14268#14575#0" expanded="false" />
           </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/pom.xml">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="2646">
-          <caret line="98" column="0" lean-forward="false" selection-start-line="98" selection-start-column="0" selection-end-line="99" selection-end-column="10" />
+        <state relative-caret-position="216">
+          <caret line="8" column="0" lean-forward="false" selection-start-line="8" selection-start-column="0" selection-end-line="99" selection-end-column="10" />
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/main/scala/Hot.scala">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="274">
-          <caret line="306" column="47" lean-forward="false" selection-start-line="306" selection-start-column="28" selection-end-line="306" selection-end-column="47" />
+        <state relative-caret-position="3087">
+          <caret line="285" column="50" lean-forward="false" selection-start-line="285" selection-start-column="41" selection-end-line="285" selection-end-column="50" />
           <folding>
             <element signature="e#57#78#0" expanded="true" />
             <element signature="e#2214#2363#0" expanded="false" />
             <element signature="e#2413#2865#0" expanded="false" />
             <element signature="e#2917#3565#0" expanded="false" />
-            <element signature="e#13008#13573#0" expanded="false" />
-            <element signature="e#13576#14114#0" expanded="false" />
-            <element signature="e#14117#14424#0" expanded="false" />
+            <element signature="e#13159#13724#0" expanded="false" />
+            <element signature="e#13727#14265#0" expanded="false" />
+            <element signature="e#14268#14575#0" expanded="false" />
           </folding>
         </state>
       </provider>

@@ -253,7 +253,8 @@ where a.dt = '$date_end' and a.mixsongid=b.scid_albumid
     //filter and format name
     val df_sn_sep = df_sn.withColumn("song", regexp_replace($"songname", "[ ]*\\([^\\(\\)]*\\)$", ""))
                          .withColumn("kind", regexp_extract($"songname", "\\(([^\\(\\)]*)\\)$", 1))
-                         .withColumnRenamed("choric_singer", "singer") //to eliminate the space effect
+                         .withColumn("singer", regexp_replace($"choric_singer", "[ ]*\\([0-9]*\\)$", "")) //to eliminate the duplicate singer effect
+//                         .withColumnRenamed("choric_singer", "singer") //to eliminate the space effect
 
     df_sn_sep.persist()
 
