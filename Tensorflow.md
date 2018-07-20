@@ -17,6 +17,95 @@ $\theta_j=\theta_j+\alpha\sum_{i=1}^{m}(y^{(i)}-h_\theta(x^{(i)}))x^{(i)}_j=\the
 
 
 
+**<u>整体的流程</u>**：
+
+- 可以后面统一用with tf.Session() as sess，但是也可以先定义，这样后面按需要调用sess.run；
+- 先构建图；
+- 然后根据最后一层的输出，计算loss值；
+  - 在定义计算图的时候，在适当的位置加上一些 [summary 操作](https://www.tensorflow.org/api_guides/python/summary) ；
+- 接着进行train_op = optimizer.minimize；
+- 接着初始化一些初始化变量的操作，比如global_variables_initializer，sess.run；
+- 可能已经加了很多 summary 操作，我们需要使用 `tf.summary.merge_all` 来将这些 summary 操作聚合成一个操作，由它来产生所有 summary 数据，之后会在sess.run中被执行，才能保存下来这些量，放在这个位置的意图是清晰，前面额外加summary都没有关系。
+
+```python
+merged = tf.summary.merge_all()
+```
+
+- 通过 `tf.summary.FileWriter()` 指定一个目录来告诉程序把产生的文件放到哪。
+- 保存模型，新建Savor对象，需要在构建完之后，常在上面的init后，这里因为多了summary所以也放在其后。
+
+```python
+saver = tf.train.Saver(max_to_keep=100)
+```
+
+- (optional) 区分是否需要载入已有模型，从而继续训练。这段代码只运行一遍，因为sess.run并不会运行到这个位置。J注意其实每个模型都是不断迭代出来的结果。
+
+```python
+ckpt = tf.train.get_checkpoint_state(model_path) #查看model下的checkpoint文件
+if ckpt and ckpt.model_checkpoint_path: #查看是否已有模型存在，存在的话考虑重新读取，然后继续训练
+    new_saver.restore(sess, ckpt.model_checkpoint_path)
+    print("restore and continue training!")
+else:
+    pass
+```
+
+- 开始执行：有两种，一种是占位符的自己执行循环，另一种则是queuerunner的隐式循环
+```python
+# Start input enqueue threads.
+coord = tf.train.Coordinator()
+threads = tf.train.start_queue_runners(sess=sess, coord=coord)
+try:
+    step = sess.run(global_step) #初始化一次step值方便后面的第一次summary
+    start_time = time.time()
+    while not coord.should_stop(): #在此循环，等待是否有任何队列所关联的线程发出停止的消息，因为需要不断对批量数据进行迭代，之前设置的allow_smaller_final_batch=False也是这个道理保证只有最后批次才不满足batch，直到末尾触发了outofrange的error，才会退出while
+        _, summary = sess.run([train_op, merged], {train_mode: True})
+        train_writer.add_summary(summary, step)
+        if step % 100 == 0: #因为一开始就是0，所以会对第一次进行统计
+            duration = time.time() - start_time
+            print('%.3f sec' % duration)
+            start_time = time.time()
+        if step % 1000 == 0:
+            save_path = new_saver.save(sess, os.path.join(model_path, "model.ckpt"), global_step=global_step)
+            print("Model saved in file: %s" % save_path)
+        step = sess.run(global_step)
+except tf.errors.OutOfRangeError:#到了末尾后，就会到这里
+    print('Done training for %d epochs, %d steps.' % (epoch, step))
+finally:#最后退出try模块，就会执行此步骤
+    # When done, ask the threads to stop.
+    save_path = new_saver.save(sess, os.path.join(model_path, "model.ckpt"), global_step=global_step)
+    print("Model saved in file: %s" % save_path)
+    coord.request_stop() #要求停止所有队列
+# Wait for threads to finish.
+coord.join(threads) #等待队列全部停止
+sess.close() #关闭sess即可
+```
+
+
+- 在运行的时候使用 `add_summary()` 来将某一步的 summary 数据记录到文件中。其中step表示第几步的信息。
+
+```python
+#两种方式记录step，表示的是批次的第几批（考虑外部的epoch）
+#一种是让optimizer.minimize自动加一
+global_step = tf.Variable(0, name="global_step", trainable=False)
+_, summary = sess.run([train_op, merged], {train_mode: True})
+train_writer.add_summary(summary, step)
+#还有一种就是自行计算
+for batch_index in range(n_batches):
+    X_batch, y_batch = fetch_batch(epoch, batch_index, batch_size)
+    if batch_index % 10 == 0:
+        summary_str = mse_summary.eval(feed_dict={X: X_batch, y: y_batch})
+        step = epoch * n_batches + batch_index
+        file_writer.add_summary(summary_str, step)
+        sess.run(training_op, feed_dict={X: X_batch, y: y_batch})
+```
+
+- 在运行的时候，到了一定的步数，保存模型
+
+```python
+save_path = new_saver.save(sess, os.path.join(model_path, "model.ckpt"), global_step=global_step)
+print("Model saved in file: %s" % save_path)
+```
+
 ##安装
 ```linux
 conda create -n tf35 python=3.5
@@ -27,9 +116,7 @@ pip install --upgrade --ignore-installed tensorflow
 
 ##概念
 
-**<u>在图的构建阶段，设置初始值，然后设置梯度更新方法，最后设置`training_op`。</u>**
-**<u>然后在执行阶段，利用循环执行`sess.run(training_op)`就可以不断更新迭代了，此时不用考虑图中的初始值。</u>**
-**<u>最后用`best_theta.eval`把参数取出来即可。此外还有一个measure model的指标比如mse，因为这个指标是对所有样本而言的，常和tf.reduce_mean搭配使用</u>**
+### 在图的构建阶段，设置初始值，然后设置梯度更新方法，最后设置`training_op`。然后在执行阶段，利用循环执行`sess.run(training_op)`就可以不断更新迭代了，此时不用考虑图中的初始值。最后用`best_theta.eval`把参数取出来即可。此外还有一个measure model的指标比如mse，因为这个指标是对所有样本而言的，常和tf.reduce_mean搭配使用
 
 ### 构造阶段和执行阶段
 A TensorFlow program is typically split into two parts: the first part builds a computation graph (this is called the construction phase), and the second part runs it (this is the execution phase).
@@ -54,13 +141,46 @@ output:
 ```
 
 ### 构造阶段：常量，变量，计算都会生成op，也就是图中的node。
-**<u>所有的常量、变量和计算的操作都是  OP；变量包含的 OP 更加复杂。</u>**
+####**<u>所有的常量、变量和计算的操作都是  OP；变量包含的 OP 更加复杂（包括了它的初始值，变量类型，赋值，读取四个 OP ）。</u>**
 
 An `Operation` is a node in a TensorFlow `Graph` that takes zero or more `Tensor` objects as input, and produces zero or more `Tensor` objects as output. Objects of type `Operation` are created by calling a Python op constructor (such as `tf.matmul`) or `tf.Graph.create_op`.
 
 For example `c = tf.matmul(a, b)` creates an `Operation` of type "MatMul" that takes tensors `a`and `b` as input, and produces `c` as output.
 
 After the graph has been launched in a session, an `Operation` can be executed by passing it to`tf.Session.run`. `op.run()` is a shortcut for calling `tf.get_default_session().run(op)`.
+
+```python
+import tensorflow as tf
+with tf.device("/cpu:0"):
+    a = tf.Variable(3.0, name='a1')
+    b = tf.constant(4.0, name='b1')
+
+c = tf.multiply(a, b, name="mul_c") #等同于 c = a*b
+d = tf.multiply(c, 2, name="mul_d")
+```
+
+#### 利用[print(n) for n in tf.get_default_graph().get_operations()]去查看具体的node信息
+
+#####查看节点，要么通过`python中的变量名.op`，要么通过`tf.get_default_graph().get_operation_by_name('节点名')`
+
+```python
+[print(n) for n in tf.get_default_graph().get_operations()]
+[print(n.name) for n in tf.get_default_graph().get_operations()]
+
+>>> [print(n.name) for n in tf.get_default_graph().get_operations()]
+a1/initial_value
+a1
+a1/Assign
+a1/read
+b1
+mul_c
+mul_d/y
+mul_d
+```
+
+#####对于计算只是计算本身会形成节点，而结果不会；此外如果计算中涉及到常数，也会生成节点
+
+就如同`mul_d/y`
 
 ###张量就是多维数组
 每一个op使用0个或多个Tensor, 执行一些计算，并生成0个或多个Tensor. 一个tensor就是一种多维数组。
@@ -89,9 +209,51 @@ X_batch, y_batch = fetch_batch(epoch, batch_index, batch_size)
 sess.run(training_op,feed_dict={X:X_batch,y:y_batch}) #每次的训练数据X和y都不一样，所以需要用placeholder进行先占位，后赋值
 ```
 
-###执行阶段
+###执行阶段（creates a session, initializes the variables,and evaluates）
 
 `f.eval()` is equivalent to calling `tf.get_default_session().run(f)`或`sess.run(f)`。
+
+```python
+with tf.Session() as sess:
+    x.initializer.run()
+    y.initializer.run()
+    result = f.eval()
+```
+
+### 初始化（常用global_variables_initializer来代替每个变量.initializer）注意：只有变量才需要初始化Variable
+
+Calling `x.initializer.run()` is equivalent to calling `tf.get_default_session().run(x.initializer)`
+
+Instead of manually running the initializer for every single variable, you can use the
+`global_variables_initializer()` function.
+
+```python
+init = tf.global_variables_initializer() # prepare an init node
+with tf.Session() as sess:
+    init.run() # actually initialize all the variables
+    result = f.eval()
+```
+
+另外一种情况是：
+
+**在使用string_input_producer来读记录的时候，如果设置了num_epochs的值，一定还要使用local_variables_initializer初始化一次（仅仅用global_variables_initializer会报错）**
+
+```python
+init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
+sess.run(init_op)
+```
+
+`tf.initialize_all_variables()` is a shortcut to `tf.initialize_variables(tf.all_variables())`, `tf.initialize_local_variables()` is a shortcut to `tf.initialize_variables(tf.local_variables())`, which initializes variables in `GraphKeys.VARIABLES` and `GraphKeys.LOCAL_VARIABLE` collections, respectively.
+
+Variables in `GraphKeys.LOCAL_VARIABLES` collection are variables that are added to the graph, but not saved or restored.
+
+`tf.Variable()` by default adds a new variable to `GraphKeys.VARIABLE` collection, which can be controlled by collections= argument.
+
+A local variable in TF is any variable which was created with `collections=[tf.GraphKeys.LOCAL_VARIABLES]`. For example:
+
+```
+e = tf.Variable(6, name='var_e', collections=[tf.GraphKeys.LOCAL_VARIABLES])
+```
 
 ##常用函数
 
@@ -331,14 +493,51 @@ with tf.Session() as sess:
 
 ### `tf.add_n`
 
-### `tf.truncated_normal`
-
 ###`tf.nn.sparse_softmax_cross_entropy_with_logits`
 该函数是将softmax和cross_entropy放在一起计算，对于分类问题而言，最后一般都是一个单层全连接神经网络，比如softmax分类器居多，对这个函数而言，tensorflow神经网络中是没有softmax层，而是在这个函数中进行softmax函数的计算。这里的logits通常是最后的全连接层的输出结果，labels是具体哪一类的标签，这个函数是直接使用标签数据的，而不是采用one-hot编码形式。
 
+**J注意下面不是sparse开头，而是全部分量，所以spase开头就是一个label，其他都是0，下面都是围绕非sparse进行讨论！**
+
 ![](picture/tf.nn.sparse_softmax_cross_entropy_with_logits.png)
 
+
+
+交叉熵刻画的是两个概率分布之间的距离，是分类问题中使用比较广泛的损失函数之一。给定两个概率分布p和q，通过交叉熵计算的两个概率分布之间的距离为：
+
+${\displaystyle H(X=x)=-\sum_x{p(x)logq(x)}}$
+
+```python
+def softmax_cross_entropy_with_logits(_sentinel=None,  # pylint: disable=invalid-name
+                                      labels=None, logits=None,
+                                      dim=-1, name=None):
+    """Computes softmax cross entropy between `logits` and `labels`."""
+```
+
+- logits: 神经网络的最后一层输出，如果有batch的话，它的大小为[batch_size, num_classes], 单样本的话大小就是num_classes
+- labels: 样本的实际标签，大小与logits相同。且必须采用labels=y_，logits=y的形式将参数传入。
+
+具体的执行流程大概分为两步，第一步首先是对网络最后一层的输出做一个softmax，这一步通常是求取输出属于某一类的概率，对于单样本而言，就是输出一个num_classes大小的向量$[Y1,Y2,Y3,....]$, 其中$Y1,Y2,Y3$分别表示属于该类别的概率， softmax的公式为：
+
+${\displaystyle softmax(x)_i={{exp(x_i)}\over{\sum_jexp(x_j)}}}$
+
+第二步是对softmax输出的向量$[Y1,Y2,Y3,....]$和样本的实际标签做一个交叉熵，公式如下：
+
+$H_{y'}(y)=-\sum_i{y_i'}log(y_i)$
+
+其中$y_i'$指代实际标签向量中的第i个值，$y_i$就是softmax的输出向量$[Y1,Y2,Y3,....]$中的第i个元素的值。
+显而易见。预测$y_i$越准确，结果的值就越小（前面有负号），最后求一个平均，就得到我们想要的loss了
+
+**这里需要注意的是，这个函数返回值不是一个数，而是一个向量，如果要求交叉熵，我们要在做一步tf.resuce_sum操作，就是对向量里面的所有元素求和, 最后就能得到$H_{y'}(y)$,如果要求loss，则需要做一步tf.reduce_mean操作，对向量求均值.**
+
+###`tf.nn.softmax`
+
+此函数就等于计算到了上面的这一步，等于是算到了各个类的概率值：
+
+$softmax(x)_i={{exp(x_i)}\over{\sum_jexp(x_j)}}$
+
+
 ###`tf.nn.in_top_k`
+
 tf.nn.in_top_k组要是用于计算预测的结果和实际结果的是否相等，返回一个bool类型的张量，tf.nn.in_top_k(prediction, target, K):prediction就是表示你预测的结果，大小就是预测样本的数量乘以输出的维度，类型是tf.float32等。target就是实际样本类别的标签，大小就是样本数量的个数。K表示每个样本的预测结果的前K个最大的数里面是否含有target中的值。一般都是取1。
 
 例如：
@@ -455,6 +654,8 @@ When training a model, it is often recommended to lower the learning rate as the
 
 接着调用minimize函数，则会将global_step自动加一: Optional `Variable` to increment by one after the variables have been updated.
 
+即在minimize中设置好global_step，那么程序就会将其不断加一。
+
 ###`tf.add_n`
 
 Adds all input tensors element-wise. 就是将tensor进行一一相加。
@@ -569,6 +770,75 @@ array([[9., 8., 7.],
        [3., 2., 1.]], dtype=float32)]
 ```
 
+###`tf.reverse_v2`
+Reverses specific dimensions of a tensor.对特定的维度，反转，也就是逆序。
+
+```python
+# tensor 't' is [[[[ 0,  1,  2,  3],
+#                  [ 4,  5,  6,  7],
+#                  [ 8,  9, 10, 11]],
+#                 [[12, 13, 14, 15],
+#                  [16, 17, 18, 19],
+#                  [20, 21, 22, 23]]]]
+# tensor 't' shape is [1, 2, 3, 4]
+
+# 'dims' is [3] or 'dims' is [-1]
+reverse(t, dims) ==> [[[[ 3,  2,  1,  0],
+                        [ 7,  6,  5,  4],
+                        [ 11, 10, 9, 8]],
+                       [[15, 14, 13, 12],
+                        [19, 18, 17, 16],
+                        [23, 22, 21, 20]]]]
+```
+
+### `tf.truncated_normal_initializer`
+Initializer that generates a truncated normal distribution.
+相比起正态分布，此截断正太分布将会剔除两个标准差以外的区域。
+These values are similar to values from a random_normal_initializer except that values more than two standard deviations from the mean are discarded and re-drawn. **This is the recommended initializer for neural network weights and filters.**
+
+### `tf.multiply`
+
+Returns x * y element-wise. 
+
+但是如果没有相同尺寸的话，会补齐，见下面实例。
+
+
+```python
+import tensorflow as tf  
+ 
+#两个矩阵相乘
+x=tf.constant([[1.0,2.0,3.0],[1.0,2.0,3.0],[1.0,2.0,3.0]])  
+y=tf.constant([[0,0,1.0],[0,0,1.0],[0,0,1.0]])
+z=tf.multiply(x,y)
+ 
+#两个数相乘
+x1=tf.constant(1)
+y1=tf.constant(2)
+z1=tf.multiply(x1,y1)
+ 
+#数和矩阵相乘
+x2=tf.constant([[1.0,2.0,3.0],[2.0,4.0,6.0],[3.0,5.0,7.0]])
+y2=tf.constant([2.0,2.0,1.0])
+z2=tf.multiply(x2,y2)
+ 
+with tf.Session() as sess:  
+    print(sess.run(z))
+    print(sess.run(z1))
+    print(sess.run(z2))
+
+ [[ 0.  0.  3.]
+ [ 0.  0.  3.]
+ [ 0.  0.  3.]]
+2
+[[  2.   4.   3.]
+ [  4.   8.   6.]
+ [  6.  10.   7.]]
+```
+
+###`tf.losses.absolute_difference`
+Adds an Absolute Difference loss to the training procedure.
+${\displaystyle D_{i}=|x_{i}-m(X)|}$
+
 ## 数据标准化
 
 ### Standard Scaler
@@ -674,10 +944,16 @@ with tf.Session() as sess:
     best_theta = theta.eval()
 #autodiff
 gradients = tf.gradients(mse, [theta])[0] #calculate the gradient
-#optimizer
+#optimizer：用此二句代替gradients和tf.assign的这两句
 optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate) #calculate the gradient
 training_op = optimizer.minimize(mse)  #assign the new value to variable
 ```
+
+### <u>使用optimizer及其minimize无需指定赋值新量</u>
+
+`optimizer.minimize`：Add operations to minimize `loss` by updating `var_list`.
+
+ **var_list**: Optional list or tuple of `Variable` objects to update to minimize `loss`. Defaults to the list of variables collected in the graph under the key `GraphKeys.TRAINABLE_VARIABLES`.
 
 ## 优化算法
 
@@ -1011,12 +1287,36 @@ optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
 So far we have seen four ways to speed up training (and reach a better solution):
 
 - applying a good initialization strategy for the connection weights
-
 - using a good activation function
-
 - using Batch Normalization
-
 - reusing parts of a pretrained network
+
+### Batch Normalization
+####原理
+
+Batch normalization 是一种解决深度神经网络层数太多, 而没办法有效前向传递(forward propagate)的问题. 因为每一层的输出值都会有不同的 均值(mean) 和 方差(deviation), 所以输出数据的分布也不一样。
+
+我们可以把 “每层输出的值” 都看成 “后面一层所接收的数据”. 对每层都进行一次 normalization 会不会更好呢? 这就是 Batch normalization 方法的由来.
+
+**BN中唯一需要学习的两个参数，y=gamma*x+beta。而μ和σ，在训练的时候，使用的是batch内的统计值，测试/预测的时候，采用的是训练时计算出的滑动平均值。 **
+
+![](picture/batch normalization1.png)
+![](picture/batch normalization2.png)
+
+####代码实现
+
+训练的时候需要注意两点，(1)输入参数`training=True`,(2)计算loss时，要添加以下代码（即添加update_ops到最后的train_op中）。这样才能计算μ和σ的滑动平均（测试时会用到） 
+
+```python
+# Add to the Graph operations that train the model.
+global_step = tf.Variable(0, name="global_step", trainable=False)
+lr = tf.train.exponential_decay(start_lr, global_step=global_step, decay_steps=3000, decay_rate=0.9,staircase=True)
+optimizer = tf.train.AdamOptimizer(lr)
+tf.summary.scalar("lr", lr)
+update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)  # update batch normalization layer
+with tf.control_dependencies(update_ops):
+    train_op = optimizer.minimize(total_loss, global_step)
+```
 
 ### Learning Rate Scheduling
 
@@ -1317,3 +1617,4 @@ https://zhuanlan.zhihu.com/p/35515805
 - [Feature Scaling with scikit-learn](http://benalexkeen.com/feature-scaling-with-scikit-learn/)
 - [Can z-scores be used for data that is not Normally distributed](https://www.reddit.com/r/math/comments/zqcei/can_zscores_be_used_for_data_that_is_not_normally/)
 - [配套代码](https://github.com/ageron/handson-ml)
+- [Tensorflow基础知识---损失函数详解 ](https://sthsf.github.io/wiki/Algorithm/DeepLearning/Tensorflow%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/Tensorflow%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86---%E6%8D%9F%E5%A4%B1%E5%87%BD%E6%95%B0%E8%AF%A6%E8%A7%A3.html)

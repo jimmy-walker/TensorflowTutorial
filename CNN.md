@@ -22,13 +22,93 @@ each neuron in the second convolutional layer is connected only to neurons locat
 
 ![](picture/feature map.png)
 
-### 卷积层实际由多组特征图组成，用3D表示
+### 卷积层实际由多组特征图组成，用3D表示（卷积层是卷积核在上一级输入层上通过逐一滑动窗口计算而得，准备说卷积核生成了卷积层）
 
 **<u>每一层卷积层，由多组特征图构成。其中每一组特征图的输出值都是由该组特征图的计算权重与前一层的多组特征图的输出值相乘，再累加而得。</u>**
 
 ![](picture/equation.png)
 
 ![](picture/feature maps.png)
+
+###具体卷积层计算过程
+
+如下图，假设现有一个为 6×6×3的图片样本，使用 3×3×3的卷积核（filter）进行卷积操作。此时输入图片的 `channels` 为 3 ，而**卷积核中**的 `in_channels` 与 需要进行卷积操作的数据的 `channels` 一致（这里就是图片样本，为3）。
+
+![cnn](picture/conv1.png)
+
+接下来，进行卷积操作，卷积核中的27个数字与分别与样本对应相乘后，再进行求和，得到第一个结果。依次进行，最终得到 4×4的结果。
+
+![单个卷积核](picture/conv2.png)
+
+上面步骤完成后，由于只有一个卷积核，所以最终得到的结果为 4×4×1， `out_channels` 为 11 。
+
+在实际应用中，都会使用多个卷积核。这里如果再加一个卷积核，就会得到 4×4×2的结果。
+
+![多个卷积核](picture/conv3.png)
+
+### 卷积层的尺寸计算
+
+####**卷积层尺寸的计算原理**
+
+- **输入矩阵**格式：四个维度，依次为：样本数、图像高度、图像宽度、图像通道数
+
+- **输出矩阵**格式：与输出矩阵的维度顺序和含义相同，但是后三个维度（图像高度、图像宽度、图像通道数）的尺寸发生变化。
+
+- **权重矩阵**（卷积核）格式：同样是四个维度，但维度的含义与上面两者都不同，为：卷积核高度、卷积核宽度、输入通道数、输出通道数（卷积核个数）
+
+- **输入矩阵、权重矩阵、输出矩阵这三者之间的相互决定关系**
+
+- - 卷积核的输入通道数（in depth）由输入矩阵的通道数所决定。（红色标注）
+  - 输出矩阵的通道数（out depth）由卷积核的输出通道数所决定。（绿色标注）
+  - 输出矩阵的高度和宽度（height, width）这两个维度的尺寸由输入矩阵、卷积核、扫描方式所共同决定。计算公式如下。（蓝色标注）
+
+![ \begin{cases} height_{out} &= (height_{in} - height_{kernel} + 2 * padding) ~ / ~ stride + 1\\[2ex] width_{out} &= (width_{in} - width_{kernel} + 2 * padding) ~ / ~ stride + 1 \end{cases}](https://www.zhihu.com/equation?tex=+%5Cbegin%7Bcases%7D+height_%7Bout%7D+%26%3D+%28height_%7Bin%7D+-+height_%7Bkernel%7D+%2B+2+%2A+padding%29+%7E+%2F+%7E+stride+%2B+1%5C%5C%5B2ex%5D+width_%7Bout%7D+%26%3D+%28width_%7Bin%7D+-+width_%7Bkernel%7D+%2B+2+%2A+padding%29+%7E+%2F+%7E+stride+%2B+1+%5Cend%7Bcases%7D)
+
+> \* 注：以下计算演示均省略掉了 Bias ，严格来说其实每个卷积核都还有一个 Bias 参数。
+
+#### **标准卷积计算举例**
+
+> 以 AlexNet 模型的第一个卷积层为例，
+> \- 输入图片的尺寸统一为 227 x 227 x 3 （高度 x 宽度 x 颜色通道数），
+> \- 本层一共具有96个卷积核，
+> \- 每个卷积核的尺寸都是 11 x 11 x 3。
+> \- 已知 stride = 4， padding = 0，
+> \- 假设 batch_size = 256，
+> \- 则输出矩阵的高度/宽度为 (227 - 11) / 4 + 1 = 55
+
+![ \begin{matrix} & \mathbf{Batch} & \mathbf{Height} && \mathbf{Width} && \mathbf{In~Depth} && \mathbf{Out~Depth}\\[2ex] \mathbf{Input} & \quad\quad 256 \quad\quad \times & \color{blue}{227} & \times & \color{blue}{227} & \times & \color{red}{3} \\[2ex] \mathbf{Kernel} &\quad\quad\quad\quad\quad & \color{blue}{11} & \times & \color{blue}{11} & \times & \color{red}{3} & \times & \color{green}{96} \\[2ex] \mathbf{Output} & \quad\quad 256 \quad\quad \times & \color{blue}{55} & \times & \color{blue}{55} &&& \times & \color{green}{96} \end{matrix}](https://www.zhihu.com/equation?tex=+%5Cbegin%7Bmatrix%7D+%26+%5Cmathbf%7BBatch%7D+%26+%5Cmathbf%7BHeight%7D+%26%26+%5Cmathbf%7BWidth%7D+%26%26+%5Cmathbf%7BIn%7EDepth%7D+%26%26+%5Cmathbf%7BOut%7EDepth%7D%5C%5C%5B2ex%5D+%5Cmathbf%7BInput%7D+%26+%5Cquad%5Cquad+256+%5Cquad%5Cquad+%5Ctimes+%26+%5Ccolor%7Bblue%7D%7B227%7D+%26+%5Ctimes+%26+%5Ccolor%7Bblue%7D%7B227%7D+%26+%5Ctimes+%26+%5Ccolor%7Bred%7D%7B3%7D+%5C%5C%5B2ex%5D+%5Cmathbf%7BKernel%7D+%26%5Cquad%5Cquad%5Cquad%5Cquad%5Cquad+%26+%5Ccolor%7Bblue%7D%7B11%7D+%26+%5Ctimes+%26+%5Ccolor%7Bblue%7D%7B11%7D+%26+%5Ctimes+%26+%5Ccolor%7Bred%7D%7B3%7D+%26+%5Ctimes+%26+%5Ccolor%7Bgreen%7D%7B96%7D+%5C%5C%5B2ex%5D+%5Cmathbf%7BOutput%7D+%26+%5Cquad%5Cquad+256+%5Cquad%5Cquad+%5Ctimes+%26+%5Ccolor%7Bblue%7D%7B55%7D+%26+%5Ctimes+%26+%5Ccolor%7Bblue%7D%7B55%7D+%26%26%26+%5Ctimes+%26+%5Ccolor%7Bgreen%7D%7B96%7D+%5Cend%7Bmatrix%7D)
+
+#### **1 x 1 卷积计算举例**
+
+> 后期 GoogLeNet、ResNet 等经典模型中普遍使用一个像素大小的卷积核作为降低参数复杂度的手段。
+> 从下面的运算可以看到，其实 1 x 1 卷积没有什么神秘的，其作用就是将输入矩阵的通道数量缩减后输出（512 降为 32），并保持它在宽度和高度维度上的尺寸（227 x 227）。
+
+![ \begin{matrix} & \mathbf{Batch} & \mathbf{Height} && \mathbf{Width} && \mathbf{In~Depth} && \mathbf{Out~Depth}\\[2ex] \mathbf{Input} & \quad\quad 256 \quad\quad \times & \color{blue}{227} & \times & \color{blue}{227} & \times & \color{red}{512} \\[2ex] \mathbf{Kernel} &\quad\quad\quad\quad\quad & \color{blue}{1} & \times & \color{blue}{1} & \times & \color{red}{512} & \times & \color{green}{32} \\[2ex] \mathbf{Output} & \quad\quad 256 \quad\quad \times & \color{blue}{227} & \times & \color{blue}{227} &&& \times & \color{green}{32} \end{matrix}](https://www.zhihu.com/equation?tex=+%5Cbegin%7Bmatrix%7D+%26+%5Cmathbf%7BBatch%7D+%26+%5Cmathbf%7BHeight%7D+%26%26+%5Cmathbf%7BWidth%7D+%26%26+%5Cmathbf%7BIn%7EDepth%7D+%26%26+%5Cmathbf%7BOut%7EDepth%7D%5C%5C%5B2ex%5D+%5Cmathbf%7BInput%7D+%26+%5Cquad%5Cquad+256+%5Cquad%5Cquad+%5Ctimes+%26+%5Ccolor%7Bblue%7D%7B227%7D+%26+%5Ctimes+%26+%5Ccolor%7Bblue%7D%7B227%7D+%26+%5Ctimes+%26+%5Ccolor%7Bred%7D%7B512%7D+%5C%5C%5B2ex%5D+%5Cmathbf%7BKernel%7D+%26%5Cquad%5Cquad%5Cquad%5Cquad%5Cquad+%26+%5Ccolor%7Bblue%7D%7B1%7D+%26+%5Ctimes+%26+%5Ccolor%7Bblue%7D%7B1%7D+%26+%5Ctimes+%26+%5Ccolor%7Bred%7D%7B512%7D+%26+%5Ctimes+%26+%5Ccolor%7Bgreen%7D%7B32%7D+%5C%5C%5B2ex%5D+%5Cmathbf%7BOutput%7D+%26+%5Cquad%5Cquad+256+%5Cquad%5Cquad+%5Ctimes+%26+%5Ccolor%7Bblue%7D%7B227%7D+%26+%5Ctimes+%26+%5Ccolor%7Bblue%7D%7B227%7D+%26%26%26+%5Ctimes+%26+%5Ccolor%7Bgreen%7D%7B32%7D+%5Cend%7Bmatrix%7D)
+
+#### **全连接层计算举例**
+
+> 实际上，全连接层也可以被视为是一种极端情况的卷积层，其卷积核尺寸就是输入矩阵尺寸，因此输出矩阵的高度和宽度尺寸都是1。
+
+![ \begin{matrix} & \mathbf{Batch} & \mathbf{Height} && \mathbf{Width} && \mathbf{In~Depth} && \mathbf{Out~Depth}\\[2ex] \mathbf{Input} & \quad \quad 256 \quad \quad \times & \color{blue}{32} & \times & \color{blue}{32} & \times & \color{red}{512} \\[2ex] \mathbf{Kernel} &\quad\quad\quad\quad\quad & \color{blue}{32} & \times & \color{blue}{32} & \times & \color{red}{512} & \times & \color{green}{4096} \\[2ex] \mathbf{Output} & \quad \quad 256 \quad \quad \times & \color{blue}{1} & \times & \color{blue}{1} &&& \times & \color{green}{4096} \end{matrix}](https://www.zhihu.com/equation?tex=+%5Cbegin%7Bmatrix%7D+%26+%5Cmathbf%7BBatch%7D+%26+%5Cmathbf%7BHeight%7D+%26%26+%5Cmathbf%7BWidth%7D+%26%26+%5Cmathbf%7BIn%7EDepth%7D+%26%26+%5Cmathbf%7BOut%7EDepth%7D%5C%5C%5B2ex%5D+%5Cmathbf%7BInput%7D+%26+%5Cquad+%5Cquad+256+%5Cquad+%5Cquad+%5Ctimes+%26+%5Ccolor%7Bblue%7D%7B32%7D+%26+%5Ctimes+%26+%5Ccolor%7Bblue%7D%7B32%7D+%26+%5Ctimes+%26+%5Ccolor%7Bred%7D%7B512%7D+%5C%5C%5B2ex%5D+%5Cmathbf%7BKernel%7D+%26%5Cquad%5Cquad%5Cquad%5Cquad%5Cquad+%26+%5Ccolor%7Bblue%7D%7B32%7D+%26+%5Ctimes+%26+%5Ccolor%7Bblue%7D%7B32%7D+%26+%5Ctimes+%26+%5Ccolor%7Bred%7D%7B512%7D+%26+%5Ctimes+%26+%5Ccolor%7Bgreen%7D%7B4096%7D+%5C%5C%5B2ex%5D+%5Cmathbf%7BOutput%7D+%26+%5Cquad+%5Cquad+256+%5Cquad+%5Cquad+%5Ctimes+%26+%5Ccolor%7Bblue%7D%7B1%7D+%26+%5Ctimes+%26+%5Ccolor%7Bblue%7D%7B1%7D+%26%26%26+%5Ctimes+%26+%5Ccolor%7Bgreen%7D%7B4096%7D+%5Cend%7Bmatrix%7D)
+
+总结下来，其实只需要认识到，虽然输入的每一张图像本身具有三个维度，但是对于卷积核来讲依然只是一个一维向量。卷积核做的，其实就是与感受野范围内的像素点进行点积（而不是矩阵乘法）。
+
+#### **附：TensorFlow 中卷积层的简单实现**
+
+```
+def conv_layer(x, out_channel, k_size, stride, padding):
+    in_channel = x.shape[3].value
+    w = tf.Variable(tf.truncated_normal([k_size, k_size, in_channel, out_channel], mean=0, stddev=stddev))
+    b = tf.Variable(tf.zeros(out_channel))
+    y = tf.nn.conv2d(x, filter=w, strides=[1, stride, stride, 1], padding=padding)
+    y = tf.nn.bias_add(y, b)
+    y = tf.nn.relu(y)
+    return x
+```
+
+- 输入 x：[batch, height, width, in_channel]
+- 权重 w：[height, width, in_channel, out_channel]
+- 输出 y：[batch, height, width, out_channel]
 
 ### 代码
 
@@ -246,4 +326,79 @@ with tf.Session() as sess:
 8 Train accuracy: 1.0 Test accuracy: 0.9881
 9 Train accuracy: 1.0 Test accuracy: 0.9879
 ```
+
+###VGC16
+```
+下面算一下每一层的像素值计算： 
+输入：224*224*3 
+1. conv3 - 64（卷积核的数量）：kernel size:3 stride:1 pad:1 
+像素：（224-3+2*1）/1+1=224 224*224*64 
+参数： （3*3*3）*64 =1728 
+2. conv3 - 64：kernel size:3 stride:1 pad:1 
+像素： （224-3+1*2）/1+1=224 224*224*64 
+参数： （3*3*64）*64 =36864 
+3. pool2 kernel size:2 stride:2 pad:0 
+像素： （224-2）/2 = 112 112*112*64 
+参数： 0 
+4.conv3-128:kernel size:3 stride:1 pad:1 
+像素： （112-3+2*1）/1+1 = 112 112*112*128 
+参数： （3*3*64）*128 =73728 
+5.conv3-128:kernel size:3 stride:1 pad:1 
+像素： （112-3+2*1）/1+1 = 112 112*112*128 
+参数： （3*3*128）*128 =147456 
+6.pool2: kernel size:2 stride:2 pad:0 
+像素： （112-2）/2+1=56 56*56*128 
+参数：0 
+7.conv3-256: kernel size:3 stride:1 pad:1 
+像素： （56-3+2*1）/1+1=56 56*56*256 
+参数：（3*3*128）*256=294912 
+8.conv3-256: kernel size:3 stride:1 pad:1 
+像素： （56-3+2*1）/1+1=56 56*56*256 
+参数：（3*3*256）*256=589824 
+9.conv3-256: kernel size:3 stride:1 pad:1 
+像素： （56-3+2*1）/1+1=56 56*56*256 
+参数：（3*3*256）*256=589824 
+10.pool2: kernel size:2 stride:2 pad:0 
+像素：（56 - 2）/2+1=28 28*28*256 
+参数：0 
+11. conv3-512:kernel size:3 stride:1 pad:1 
+像素：（28-3+2*1）/1+1=28 28*28*512 
+参数：（3*3*256）*512 = 1179648 
+12. conv3-512:kernel size:3 stride:1 pad:1 
+像素：（28-3+2*1）/1+1=28 28*28*512 
+参数：（3*3*512）*512 = 2359296 
+13. conv3-512:kernel size:3 stride:1 pad:1 
+像素：（28-3+2*1）/1+1=28 28*28*512 
+参数：（3*3*512）*512 = 2359296 
+14.pool2: kernel size:2 stride:2 pad:0 
+像素：（28-2）/2+1=14 14*14*512 
+参数： 0 
+15. conv3-512:kernel size:3 stride:1 pad:1 
+像素：（14-3+2*1）/1+1=14 14*14*512 
+参数：（3*3*512）*512 = 2359296 
+16. conv3-512:kernel size:3 stride:1 pad:1 
+像素：（14-3+2*1）/1+1=14 14*14*512 
+参数：（3*3*512）*512 = 2359296 
+17. conv3-512:kernel size:3 stride:1 pad:1 
+像素：（14-3+2*1）/1+1=14 14*14*512 
+参数：（3*3*512）*512 = 2359296 
+18.pool2:kernel size:2 stride:2 pad:0 
+像素：（14-2）/2+1=7 7*7*512 
+参数：0 
+19.FC: 4096 neurons 
+像素：1*1*4096 
+参数：7*7*512*4096 = 102760448 
+20.FC: 4096 neurons 
+像素：1*1*4096 
+参数：4096*4096 = 16777216 
+21.FC：1000 neurons 
+像素：1*1*1000 
+参数：4096*1000=4096000
+```
+
+## Reference
+
+- [CNN计算](https://blog.csdn.net/sscc_learning/article/details/79814146)
+- [CNN尺寸](https://zhuanlan.zhihu.com/p/29119239)
+- [VGC16尺寸计算](https://blog.csdn.net/zhangwei15hh/article/details/78417789)
 
