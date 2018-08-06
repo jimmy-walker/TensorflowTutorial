@@ -4,6 +4,10 @@
 ```
 ssh dlearning@10.1.173.173
 pw:dlearning@kugou
+
+ssh -p 22 usertest1@10.1.173.172
+gpu@test
+python2.7路径/home/test/anaconda2/bin/python
 ```
 
 ## 查看GPU:nvidia-smi

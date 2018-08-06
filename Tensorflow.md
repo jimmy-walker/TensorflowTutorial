@@ -32,18 +32,18 @@ merged = tf.summary.merge_all()
 ```
 
 - 通过 `tf.summary.FileWriter()` 指定一个目录来告诉程序把产生的文件放到哪。
-- 保存模型，新建Savor对象，需要在构建完之后，常在上面的init后，这里因为多了summary所以也放在其后。
+- 保存模型，新建Savor对象，需要在构建完之后，常在上面的init后，这里因为临时多加了summary，也不会影响此语句位置，因为一直在后面。**Jsaver表示的就是最终保存在文件夹内的一个文件。**
 
 ```python
 saver = tf.train.Saver(max_to_keep=100)
 ```
 
-- (optional) 区分是否需要载入已有模型，从而继续训练。这段代码只运行一遍，因为sess.run并不会运行到这个位置。J注意其实每个模型都是不断迭代出来的结果。
+- (optional) 区分是否需要载入已有模型，从而继续训练。这段代码只运行一遍，因为sess.run并不会运行到这个位置。J注意其实每个模型都是不断迭代出来的结果。**表示的是使用saver对象的restore方法，将模型中的变量加载到sess中去。**
 
 ```python
 ckpt = tf.train.get_checkpoint_state(model_path) #查看model下的checkpoint文件
 if ckpt and ckpt.model_checkpoint_path: #查看是否已有模型存在，存在的话考虑重新读取，然后继续训练
-    new_saver.restore(sess, ckpt.model_checkpoint_path)
+    new_saver.restore(sess, ckpt.model_checkpoint_path) #表示的是使用saver对象的restore方法，将模型中的变量加载到sess中去。
     print("restore and continue training!")
 else:
     pass
@@ -87,8 +87,8 @@ sess.close() #关闭sess即可
 #两种方式记录step，表示的是批次的第几批（考虑外部的epoch）
 #一种是让optimizer.minimize自动加一
 global_step = tf.Variable(0, name="global_step", trainable=False)
-_, summary = sess.run([train_op, merged], {train_mode: True})
-train_writer.add_summary(summary, step)
+_, summary = sess.run([train_op, merged], {train_mode: True}) #注意因为要查询两个量的值，所以返回两个量，summary对应merged
+train_writer.add_summary(summary, step) #注意这里的summary表示内容，step表示第几步
 #还有一种就是自行计算
 for batch_index in range(n_batches):
     X_batch, y_batch = fetch_batch(epoch, batch_index, batch_size)
@@ -184,6 +184,15 @@ mul_d
 
 ###张量就是多维数组
 每一个op使用0个或多个Tensor, 执行一些计算，并生成0个或多个Tensor. 一个tensor就是一种多维数组。
+
+```python
+inputs = Input(shape=(784,))
+inputs
+#<tf.Tensor 'input_1:0' shape=(?, 784) dtype=float32>
+#此表示It means that first dimension is not fixed in the graph and it can vary between run calls
+```
+
+
 
 ###placeholder node占位符节点也是一种op，<u>先占位后赋值</u>（<u>注意无论是eval还是run都需要将参数feed_dict送入；另外eval只能对tensor对象解析，而其他list等需要用run</u>）
 `tf.placeholder()` 操作(operation)允许你定义一种必须提供值的 tensor。
@@ -826,7 +835,7 @@ with tf.Session() as sess:
     print(sess.run(z1))
     print(sess.run(z2))
 
- [[ 0.  0.  3.]
+[[ 0.  0.  3.]
  [ 0.  0.  3.]
  [ 0.  0.  3.]]
 2
@@ -838,6 +847,55 @@ with tf.Session() as sess:
 ###`tf.losses.absolute_difference`
 Adds an Absolute Difference loss to the training procedure.
 ${\displaystyle D_{i}=|x_{i}-m(X)|}$
+
+###`tf.argmax`
+Returns the index with the largest value across axes of a tensor. (deprecated arguments)
+```python
+import tensorflow as tf
+a=tf.get_variable(name='a',
+                  shape=[3,4],
+                  dtype=tf.float32,
+                  initializer=tf.random_uniform_initializer(minval=-1,maxval=1))
+b=tf.argmax(input=a,axis=0)
+c=tf.argmax(input=a,dimension=1)   #此处用dimesion或用axis是一样的
+sess = tf.InteractiveSession()
+sess.run(tf.initialize_all_variables())
+print(sess.run(a))
+#[[ 0.04261756 -0.34297419 -0.87816691 -0.15430689]
+# [ 0.18663144  0.86972666 -0.06103253  0.38307118]
+# [ 0.84588599 -0.45432305 -0.39736366  0.38526249]]
+print(sess.run(b))
+#[2 1 1 2]
+print(sess.run(c))
+#[0 1 0]
+```
+
+### `tf.map_fn`
+
+```
+map_fn(
+    fn,
+    elems,
+    dtype=None,
+    parallel_iterations=10,
+    back_prop=True,
+    swap_memory=False,
+    infer_shape=True,
+    name=None
+)
+```
+
+map_fn 的最简单版本反复地将可调用的 fn 应用于从第一个到最后一个的元素序列。这些元素由 elems 解压缩的张量构成。dtype 是 fn 的返回值的数据类型。如果与elems 的数据类型不同，用户必须提供 dtype。 
+
+从0维度的 elems 中解压的张量列表上的映射。  
+
+```python
+elems = np.array([1, 2, 3, 4, 5, 6])
+squares = map_fn(lambda x: x * x, elems)
+# squares == [1, 4, 9, 16, 25, 36]
+```
+
+
 
 ## 数据标准化
 
@@ -1305,7 +1363,7 @@ Batch normalization 是一种解决深度神经网络层数太多, 而没办法�
 
 ####代码实现
 
-训练的时候需要注意两点，(1)输入参数`training=True`,(2)计算loss时，要添加以下代码（即添加update_ops到最后的train_op中）。这样才能计算μ和σ的滑动平均（测试时会用到） 
+训练的时候需要注意两点，(1)输入参数`training=True`,(2)计算loss时，要添加以下代码（即添加update_ops到最后的train_op中）。这样才能计算μ和σ的滑动平均（测试时会用到） <u>J因为打算让这两者的滑动平均都保存在`UPDATE_OPS`的原位中，而不是所有的滑动平均都保存，那么就需要先计算完一次`update_ops`后，然后再计算下一次的更新，这样再会继续计算`update_ops`。</u>
 
 ```python
 # Add to the Graph operations that train the model.
@@ -1317,6 +1375,34 @@ update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)  # update batch normaliz
 with tf.control_dependencies(update_ops):
     train_op = optimizer.minimize(total_loss, global_step)
 ```
+
+而在测试中，需要设置好模式即可，这样给`slim.conv2d`和`slim.fully_connected`准备了默认参数。 
+
+```python
+def _inference(images, keep_probability, phase_train=True,
+               bottleneck_layer_size=128, weight_decay=0.0, reuse=None):
+    batch_norm_params = {
+        # Decay for the moving averages.
+        'decay': 0.995,
+        # epsilon to prevent 0s in variance.
+        'epsilon': 0.001,
+        # force in-place updates of mean and variance estimates
+        'updates_collections': None, #默认就为None，表示在原位更新值
+        # Moving averages ends up in the trainable variables collection
+        'variables_collections': [tf.GraphKeys.TRAINABLE_VARIABLES],
+    }
+
+    with slim.arg_scope([slim.conv2d, slim.fully_connected],
+                        weights_initializer=tf.truncated_normal_initializer(stddev=0.1),
+                        weights_regularizer=slim.l2_regularizer(weight_decay),
+                        normalizer_fn=slim.batch_norm,
+                        normalizer_params=batch_norm_params):
+        return inception_resnet_v1(images, is_training=phase_train, #此处设置为test即可
+                                   dropout_keep_prob=keep_probability, bottleneck_layer_size=bottleneck_layer_size,
+                                   reuse=reuse)
+```
+
+
 
 ### Learning Rate Scheduling
 

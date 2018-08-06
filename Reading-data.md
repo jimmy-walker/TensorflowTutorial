@@ -1,4 +1,4 @@
-# Reading data
+Reading data
 
 ## 基础知识
 
@@ -371,7 +371,146 @@ coord.join(threads) #等待队列全部停止
 sess.close() #关闭sess即可
 ```
 
+## `tf.data`
 
+```
+在一个input函数中：
+先读入所有的tfrecord文件，组成列表传入dataset = tf.data.TFRecordDataset(filename)
+然后利用函数的方式进行处理dataset = dataset.map(decode)，对其中每一个图片文件名进行处理，返回的也只是一个样本。注意这里虽然没有对所有样本循环，我猜测是流式隐循环；
+然后设置shuffle（不用考虑min_after_dequeue和num_threads），repeat和batch或apply(tf.contrib.data.batch_and_drop_remainder(batch_size))
+最后生成迭代器返回iterator = dataset.make_one_shot_iterator()，get_next()
+
+而在input函数外
+用try进行训练sess.run，捕获tf.errors.OutOfRangeError，然后关闭sess.close即可
+```
+
+#### 查看具体数据的演示代码
+
+可以考虑像上一个一样，设置较小的batch，然后sess.run就可以打印出。
+
+#### 代码
+
+```python
+def decode(serialized_example):
+    """Parses an image and label from the given `serialized_example`."""
+    features = tf.parse_single_example(
+      serialized_example,
+      # Defaults are not specified since both keys are required.
+      features={
+          'image_raw': tf.FixedLenFeature([], tf.string),
+          'age': tf.FixedLenFeature([], tf.int64),
+          'gender': tf.FixedLenFeature([], tf.int64),
+          'file_name': tf.FixedLenFeature([], tf.string),
+      })
+
+    # Convert from a scalar string tensor (whose single string has
+    # length mnist.IMAGE_PIXELS) to a uint8 tensor with shape
+    # [mnist.IMAGE_PIXELS].
+    image = tf.decode_raw(features['image_raw'], tf.uint8)
+    image.set_shape([160 * 160 * 3])
+    image = tf.reshape(image, [160, 160, 3])
+    image = tf.reverse_v2(image, [-1])
+    image = tf.image.per_image_standardization(image)
+
+    # Convert label from a scalar uint8 tensor to an int32 scalar.
+    age = features['age']
+    gender = features['gender']
+    file_path = features['file_name']
+
+    return image, age, gender, file_path
+
+def inputs(path, batch_size, num_epochs):
+    """Reads input data
+
+    Args:
+    path: the path where tfrecord file is stored
+
+    Returns:
+    A tuple (images, age_labels, gender_labels, file_paths), where:
+
+    This function creates a one_shot_iterator, meaning that it will only iterate
+    over the dataset once. On the other hand there is no special initialization
+    required.
+    """
+    filename = glob.glob(path + "/*.tfrecords")
+
+    with tf.name_scope('input'):
+        # TFRecordDataset opens a binary file and reads one record at a time.
+        # `filename` could also be a list of filenames, which will be read in order.
+        dataset = tf.data.TFRecordDataset(filename)
+
+        # The map transformation takes a function and applies it to every element
+        # of the dataset.
+        dataset = dataset.map(decode)
+
+        # The shuffle transformation uses a finite-sized buffer to shuffle elements
+        # in memory. The parameter is the number of elements in the buffer. For
+        # completely uniform shuffling, set the parameter to be the same as the
+        # number of elements in the dataset.
+        dataset = dataset.shuffle(1000 + 3 * batch_size)
+
+        dataset = dataset.repeat(num_epochs)
+        dataset = dataset.batch(batch_size)
+        #dataset = dataset.apply(tf.contrib.data.batch_and_drop_remainder(batch_size))
+        #the final batch contain smaller tensors with shape N % batch_size in the batch dimension. 
+        #If your program depends on the batches having the same shape, 
+        #consider using the tf.contrib.data.batch_and_drop_remainder transformation instead.
+
+        iterator = dataset.make_one_shot_iterator()
+    return iterator.get_next()
+
+def test_once(image_path, batch_size, model_checkpoint_path):
+    with tf.Graph().as_default():
+        sess = tf.Session()
+        images, age_labels, gender_labels, file_paths = inputs(
+            path=image_path,
+            batch_size=batch_size,
+            num_epochs=1)
+        train_mode = tf.placeholder(tf.bool)
+        age_logits, gender_logits, _ = inception_resnet_v1.inference(images, keep_probability=0.8,
+                                                                     phase_train=train_mode,
+                                                                     weight_decay=1e-5)
+        age_cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=age_labels, logits=age_logits)
+        age_cross_entropy_mean = tf.reduce_mean(age_cross_entropy)
+
+        gender_cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=gender_labels,
+                                                                              logits=gender_logits)
+        gender_cross_entropy_mean = tf.reduce_mean(gender_cross_entropy)
+        total_loss = tf.add_n(
+            [gender_cross_entropy_mean, age_cross_entropy_mean] + tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES),
+            name="total_loss")
+
+        age_ = tf.cast(tf.constant([i for i in range(0, 101)]), tf.float32)
+        prob_age = tf.reduce_sum(tf.multiply(tf.nn.softmax(age_logits), age_), axis=1)
+        abs_age_error = tf.losses.absolute_difference(prob_age, age_labels)
+
+        prob_gender = tf.argmax(tf.nn.softmax(gender_logits), 1)
+        gender_acc = tf.reduce_mean(tf.cast(tf.nn.in_top_k(gender_logits, gender_labels, 1), tf.float32))
+        init_op = tf.group(tf.global_variables_initializer(),
+                           tf.local_variables_initializer())
+        sess.run(init_op)
+        saver = tf.train.Saver()
+        saver.restore(sess, model_checkpoint_path)
+
+        mean_error_age, mean_gender_acc, mean_loss = [], [], []
+
+        try:
+            while True:  # Train until OutOfRangeError
+                prob_gender_val, real_gender, prob_age_val, real_age, image_val, gender_acc_val, abs_age_error_val, cross_entropy_mean_val, file_names = sess.run(
+                    [prob_gender, gender_labels, prob_age, age_labels, images, gender_acc, abs_age_error, total_loss,
+                     file_paths], {train_mode: False})
+                mean_error_age.append(abs_age_error_val)
+                mean_gender_acc.append(gender_acc_val)
+                mean_loss.append(cross_entropy_mean_val)
+                print("Age_MAE:%.2f,Gender_Acc:%.2f%%,Loss:%.2f" % (
+                    abs_age_error_val, gender_acc_val * 100, cross_entropy_mean_val))
+        except tf.errors.OutOfRangeError:
+            print('!!!TESTING DONE!!!')
+
+        sess.close()
+        return prob_age_val, real_age, prob_gender_val, real_gender, image_val, np.mean(
+            mean_error_age), np.mean(mean_gender_acc), np.mean(mean_loss), file_names
+```
 
 
 
