@@ -40,7 +40,7 @@ each neuron in the second convolutional layer is connected only to neurons locat
 
 ![单个卷积核](picture/conv2.png)
 
-上面步骤完成后，由于只有一个卷积核，所以最终得到的结果为 4×4×1， `out_channels` 为 11 。
+上面步骤完成后，由于只有一个卷积核，所以最终得到的结果为 4×4×1， `out_channels` 为 1 。
 
 在实际应用中，都会使用多个卷积核。这里如果再加一个卷积核，就会得到 4×4×2的结果。
 
