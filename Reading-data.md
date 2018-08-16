@@ -384,11 +384,11 @@ sess.close() #关闭sess即可
 用try进行训练sess.run，捕获tf.errors.OutOfRangeError，然后关闭sess.close即可
 ```
 
-#### 查看具体数据的演示代码
+### 查看具体数据的演示代码
 
 可以考虑像上一个一样，设置较小的batch，然后sess.run就可以打印出。
 
-#### 代码
+### 代码
 
 ```python
 def decode(serialized_example):
@@ -512,9 +512,337 @@ def test_once(image_path, batch_size, model_checkpoint_path):
             mean_error_age), np.mean(mean_gender_acc), np.mean(mean_loss), file_names
 ```
 
+## 数据增强
+
+###基本代码
+```python
+def decode(serialized_example):
+    """Parses an image and label from the given `serialized_example`."""
+    features = tf.parse_single_example(
+      serialized_example,
+      # Defaults are not specified since both keys are required.
+      features={
+          'image_raw': tf.FixedLenFeature([], tf.string),
+          'age': tf.FixedLenFeature([], tf.int64),
+          'gender': tf.FixedLenFeature([], tf.int64),
+          'file_name': tf.FixedLenFeature([], tf.string),
+      })
+
+    # Convert from a scalar string tensor (whose single string has
+    # length mnist.IMAGE_PIXELS) to a uint8 tensor with shape
+    # [mnist.IMAGE_PIXELS].
+    image = tf.decode_raw(features['image_raw'], tf.uint8)
+    image.set_shape([160 * 160 * 3])
+    image = tf.reshape(image, [160, 160, 3])
+    image = tf.reverse_v2(image, [-1])
+    # image = tf.image.per_image_standardization(image)
+
+    # Convert label from a scalar uint8 tensor to an int32 scalar.
+    age = features['age']
+    gender = features['gender']
+    file_path = features['file_name']
+
+    return image, age, gender, file_path
+
+def augment(image, age, gender, file_path):
+    image = tf.image.random_flip_left_right(image)
+    image = tf.image.random_brightness(image, max_delta=32.0 / 255.0)
+    image = tf.image.random_saturation(image, lower=0.5, upper=1.5)
+    return image, age, gender, file_path
+
+def normalize(image, age, gender, file_path):
+    image = tf.image.per_image_standardization(image)
+    return image, age, gender, file_path
+
+def inputs(path, batch_size, num_epochs, allow_smaller_final_batch=False):
+    """Reads input data num_epochs times.
+    Args:
+    train: Selects between the training (True) and validation (False) data.
+    batch_size: Number of examples per returned batch.
+    num_epochs: Number of times to read the input data, or 0/None to
+       train forever.
+    Returns:
+    A tuple (images, labels), where:
+    * images is a float tensor with shape [batch_size, mnist.IMAGE_PIXELS]
+      in the range [-0.5, 0.5].
+    * labels is an int32 tensor with shape [batch_size] with the true label,
+      a number in the range [0, mnist.NUM_CLASSES).
+    Note that an tf.train.QueueRunner is added to the graph, which
+    must be run using e.g. tf.train.start_queue_runners().
+    """
+    if not num_epochs: num_epochs = None
+    # filename = os.path.join(FLAGS.train_dir,
+    #                       TRAIN_FILE if train else VALIDATION_FILE)
+
+    with tf.name_scope('input'):
+        # TFRecordDataset opens a binary file and reads one record at a time.
+        # `filename` could also be a list of filenames, which will be read in order.
+        dataset = tf.data.TFRecordDataset(path)
+
+        # The map transformation takes a function and applies it to every element
+        # of the dataset.
+        dataset = dataset.map(decode)
+        dataset = dataset.map(augment)
+        dataset = dataset.map(normalize)
+
+        # The shuffle transformation uses a finite-sized buffer to shuffle elements
+        # in memory. The parameter is the number of elements in the buffer. For
+        # completely uniform shuffling, set the parameter to be the same as the
+        # number of elements in the dataset.
+        dataset = dataset.shuffle(1000 + 3 * batch_size)
+
+        dataset = dataset.repeat(num_epochs)
+        dataset = dataset.apply(tf.contrib.data.batch_and_drop_remainder(batch_size))
+        #the final batch contain smaller tensors with shape N % batch_size in the batch dimension. 
+        #If your program depends on the batches having the same shape, 
+        #consider using the tf.contrib.data.batch_and_drop_remainder transformation instead.
+
+        iterator = dataset.make_one_shot_iterator()
+
+    return iterator.get_next()
+```
+
+###基础知识
+
+#### 对比度，饱和度，色相，亮度
+
+**J因而根据分析，一般色相不去动（颜色就变了），明度和饱和度去动（因为可能环境会有灯光影响），对比度就不动了（默认最亮颜色和最暗间的阶层是不变的）。**
+
+对比度，则表示指图像的最亮部分与最暗部分亮度的比值。
+
+色相：色彩的相貌。我们常说的 红色黄色橙色绿色蓝色。。这些就是对色相的一个描述。
+![](picture/hue.png)
+
+明度：色彩的明亮程度。我们可以通俗的理解成，这个颜色加了多少白颜料，加了多少黑颜料。
+![](picture/brightness.png)
+
+纯度：色彩的饱和度。从左至右，纯度由高变低。纯度越高，颜色越正，越容易分辨。所以我们在日常生活中看到的那些 一眼看不出是什么颜色的颜色大致就是纯度低的颜色。
+![](picture/saturation.png)
+
+#### 参数设置
+
+```python
+#!/usr/bin/python
+# coding:utf-8
+
+# 图像预处理
+import tensorflow as tf
+import numpy as np
+import matplotlib.pyplot as plt
+
+# 调整亮度.对比度.饱和度.色相的顺序可以得到不同的结果
+# 预处理时随机选择的一种,降低无关因素对模型的影响
+def distort_color(image, color_ordering=0):
+    if color_ordering == 0:
+        image = tf.image.random_brightness(image, max_delta=32./255)
+        image = tf.image.random_contrast(image, lower=0.5, upper=1.5)
+        image = tf.image.random_hue(image, max_delta=0.2)
+        image = tf.image.random_saturation(image, lower=0.5, upper=1.5)
+    elif color_ordering ==1:
+        image = tf.image.random_saturation(image, lower=0.5, upper=1.5)
+        image = tf.image.random_brightness(image, max_delta=32./255)
+        image = tf.image.random_contrast(image, lower=0.5, upper=1.5)
+        image = tf.image.random_hue(image, max_delta=0.2)
+    elif color_ordering ==2:
+        image = tf.image.random_brightness(image, max_delta=32./255)
+        image = tf.image.random_saturation(image, lower=0.5, upper=1.5)
+        image = tf.image.random_contrast(image, lower=0.5, upper=1.5)
+        image = tf.image.random_hue(image, max_delta=0.2)
+    elif color_ordering ==3:
+        image = tf.image.random_brightness(image, max_delta=32./255)
+        image = tf.image.random_contrast(image, lower=0.5, upper=1.5)
+        image = tf.image.random_saturation(image, lower=0.5, upper=1.5)
+        image = tf.image.random_hue(image, max_delta=0.2)
+    elif color_ordering ==4:
+        image = tf.image.random_brightness(image, max_delta=32./255)
+        image = tf.image.random_contrast(image, lower=0.5, upper=1.5)
+        image = tf.image.random_saturation(image, lower=0.5, upper=1.5)
+        image = tf.image.random_hue(image, max_delta=0.2)
+    elif color_ordering ==5:
+        image = tf.image.random_contrast(image, lower=0.5, upper=1.5)
+        image = tf.image.random_brightness(image, max_delta=32./255)
+        image = tf.image.random_saturation(image, lower=0.5, upper=1.5)
+        image = tf.image.random_hue(image, max_delta=0.2)
+
+    return tf.clip_by_value(image, 0.0, 1.0)
+
+# 给定解码后的图像.目标图像的尺寸以及图像上的标注框
+def preprocess(image, height, width, bbox):
+    # 若没有提供标注框则默认为关注区域为整个图像
+    if bbox is None:
+        bbox = tf.constant([0.0, 0.0, 1.0, 1.0], dtype=tf.float32, shape=[1, 1, 4])
+    # 转换图像数据类型
+    if image.dtype != tf.float32:
+        image = tf.image.convert_image_dtype(image, dtype=tf.float32)
+    # 随机截取图像减小识别物体大小对模型的影响
+    bbox_begin, bbox_size, _ = tf.image.sample_distorted_bounding_box(tf.shape(image), bounding_boxes=bbox)
+    distorted_image = tf.slice(image, bbox_begin, bbox_size)
+    # 随机调整图像的大小
+    distorted_image = tf.image.resize_images(distorted_image, (height, width), method=np.random.randint(4))
+    # 随机左右翻转图像
+    distorted_image = tf.image.random_flip_left_right(distorted_image)
+    # 使用一种随机的顺序调整图像色彩
+    distorted_image = distort_color(distorted_image, np.random.randint(2))
+    return distorted_image
+
+# 获取图像
+image_raw_data = tf.gfile.FastGFile('daibola.jpg', 'r').read()
+with tf.Session() as sess:
+    img_data = tf.image.decode_jpeg(image_raw_data)
+    boxes = tf.constant([[[0.1, 0.32, 0.8, 0.7]]])
+    # 获得9种不同的图像并显示结果
+    for i in range(9):
+        # 将图像大小调整为200*200
+        result = preprocess(img_data, 200, 200, boxes)
+        plt.subplot(331+i), plt.imshow(result.eval()), plt.title(str(i+1))
+    plt.show()
+```
+
+#### 测试代码
+
+```python
+#coding=utf-8
+import matplotlib.pyplot as plt
+import tensorflow as tf
+import numpy as np
+ 
+image_raw_data = tf.gfile.FastGFile('cat.jpg','rb').read()
+ 
+with tf.Session() as sess:
+     img_data = tf.image.decode_jpeg(image_raw_data)
+     plt.subplot(331)
+     plt.title("Original")
+ 
+     plt.imshow(img_data.eval())
+     #plt.show()
+ 
+     resized = tf.image.resize_images(img_data, [100, 100], method=0)
+     # TensorFlow的函数处理图片后存储的数据是float32格式的，需要转换成uint8才能正确打印图片。
+     print("Digital type: ", resized.dtype)
+     resized = np.asarray(resized.eval(), dtype='uint8')
+     # tf.image.convert_image_dtype(rgb_image, tf.float32)
+     plt.subplot(332)
+     plt.title("100*100")
+     plt.imshow(resized)
+ 
+     #plt.show()
+ 
+     croped = tf.image.resize_image_with_crop_or_pad(img_data, 500, 500)
+     padded = tf.image.resize_image_with_crop_or_pad(img_data, 1500, 1500)
+     plt.subplot(333)
+     plt.title("500*500")
+     plt.imshow(croped.eval())
+    # plt.show()
+     plt.subplot(334)
+     plt.title("1500*1500")
+     plt.imshow(padded.eval())
+     #plt.show()
+ 
+     central_cropped = tf.image.central_crop(img_data, 0.5)
+     plt.subplot(335)
+     plt.title("*0.5")
+     plt.imshow(central_cropped.eval())
+#     plt.show()
+ 
+     # 上下翻转
+     flipped1 = tf.image.flip_up_down(img_data)
+     plt.subplot(336)
+     plt.title("up-down")
+     plt.imshow(flipped1.eval())
+     #plt.show()
+     # 左右翻转
+     flipped2 = tf.image.flip_left_right(img_data)
+     plt.subplot(337)
+     plt.title("left-right")
+     plt.imshow(flipped2.eval())
+     #plt.show()
+     # 对角线翻转
+     transposed = tf.image.transpose_image(img_data)
+     plt.subplot(338)
+     plt.title("transpose")
+     plt.imshow(transposed.eval())
+    # plt.show()
+ 
+     flipped3 = tf.image.random_flip_up_down(img_data)
+     plt.subplot(339)
+     plt.title("flip-up-down")
+     plt.imshow(flipped3.eval())
+     plt.show()
+#————————————————————————————————————————————#
+     # 将图片的亮度-0.5。
+     adjusted = tf.image.adjust_brightness(img_data, -0.5)
+     plt.subplot(331)
+     plt.imshow(adjusted.eval())
+ 
+     plt.title("bright-0.5")
+     #plt.show()
+ 
+     # 将图片的亮度0.5
+     adjusted = tf.image.adjust_brightness(img_data, 0.5)
+     plt.subplot(332)
+     plt.imshow(adjusted.eval())
+ 
+     plt.title("bright+0.5")
+     #plt.show()
+     # 在[-max_delta, max_delta)的范围随机调整图片的亮度。
+     adjusted = tf.image.random_brightness(img_data, max_delta=0.5)
+     plt.subplot(333)
+     plt.imshow(adjusted.eval())
+ 
+     plt.title("bright-random")
+     #plt.show()
+     # 将图片的对比度-5
+     adjusted = tf.image.adjust_contrast(img_data, -5)
+     plt.subplot(334)
+     plt.imshow(adjusted.eval())
+     plt.title("contrast-5")
+     #plt.show()
+     # 将图片的对比度+5
+     adjusted = tf.image.adjust_contrast(img_data, 5)
+     plt.subplot(335)
+     plt.imshow(adjusted.eval())
+ 
+     plt.title("contrast+5")
+     #plt.show()
+     # 在[lower, upper]的范围随机调整图的对比度。
+     adjusted = tf.image.random_contrast(img_data, 0.1, 0.6)
+     plt.subplot(336)
+     plt.imshow(adjusted.eval())
+     plt.title("contrast-random")
+     #plt.show()
+ 
+     # 调整图片的色相
+     adjusted = tf.image.adjust_hue(img_data, 0.1)
+     plt.subplot(337)
+     plt.imshow(adjusted.eval())
+     plt.title("hue_0.1")
+     #plt.show()
+ 
+     # 在[-max_delta, max_delta]的范围随机调整图片的色相。max_delta的取值在[0, 0.5]之间。
+     adjusted = tf.image.random_hue(img_data, 0.5)
+     plt.subplot(338)
+     plt.imshow(adjusted.eval())
+     plt.title("hue-random_0.5")
+     #plt.show()
+ 
+     # 将图片的饱和度-5。
+     adjusted = tf.image.adjust_saturation(img_data, -2)
+     plt.subplot(339)
+     plt.title("saturation-2")
+     plt.imshow(adjusted.eval())
+     plt.show()
+ 
+     # 在[lower, upper]的范围随机调整图的饱和度。
+     #adjusted = tf.image.random_saturation(img_data, 0, 5)
+ 
+     # 将代表一张图片的三维矩阵中的数字均值变为0，方差变为1。
+     #adjusted = tf.image.per_image_standardization(img_data)
+```
+
 
 
 ## Reference
 
 - [Reading data](https://www.tensorflow.org/api_guides/python/reading_data)
 - [Importing Data](https://www.tensorflow.org/guide/datasets)
+- [Building an image data pipeline](https://cs230-stanford.github.io/tensorflow-input-data.html#building-an-image-data-pipeline)

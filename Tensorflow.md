@@ -895,6 +895,11 @@ squares = map_fn(lambda x: x * x, elems)
 # squares == [1, 4, 9, 16, 25, 36]
 ```
 
+###`tf.image.per_image_standardization`
+
+This op computes `(x - mean) / adjusted_stddev`, where `mean` is the average of all values in image, and `adjusted_stddev = max(stddev, 1.0/sqrt(image.NumElements()))`.
+
+`stddev` is the standard deviation of all values in `image`. It is capped away from zero to protect against division by 0 when handling uniform images.
 
 
 ## 数据标准化
