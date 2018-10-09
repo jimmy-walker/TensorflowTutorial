@@ -319,6 +319,43 @@ https://www.cnblogs.com/arkenstone/p/8448208.html
 
 **所以还是用回tf.data来读数据，在tf.data里面做增强。**
 
+### 另一种声音
+
+[此文](https://medium.com/@moritzkrger/speeding-up-keras-with-tfrecord-datasets-5464f9836c36)作者提出可以在keras中使用tfrecord，待使用查看效果。
+
+```python
+import tensorflow as tf
+from tensorflow.python import keras as keras
+
+STEPS_PER_EPOCH= SUM_OF_ALL_DATASAMPLES / BATCHSIZE
+#Get your datatensors
+image, label = create_dataset(filenames_train)
+
+#Combine it with keras
+model_input = keras.layers.Input(tensor=image)
+
+#Build your network
+model_output = keras.layers.Flatten(input_shape=(-1, 255, 255, 1))(model_input)
+model_output = keras.layers.Dense(1000, activation='relu')(model_output)
+
+#Create your model
+train_model = keras.models.Model(inputs=model_input, outputs=model_output)
+
+#Compile your model
+train_model.compile(optimizer=keras.optimizers.RMSprop(lr=0.0001),
+                    loss='mean_squared_error',
+                    metrics=[soft_acc],
+                    target_tensors=[label])
+
+#Train the model
+train_model.fit(epochs=EPOCHS,
+                steps_per_epoch=STEPS_PER_EPOC)
+
+#More Kerasstuff here
+```
+
+
+
 ## 回调函数
 
 回调函数是一个函数的合集，会在训练的阶段中所使用。你可以使用回调函数来查看训练模型的内在状态和统计。你可以传递一个列表的回调函数（作为 `callbacks` 关键字参数）到 `Sequential` 或 `Model` 类型的 `.fit()` 方法。在训练时，相应的回调函数的方法就会被在各自的阶段被调用。 

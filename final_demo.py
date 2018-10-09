@@ -9,8 +9,11 @@ import numpy as np
 import tensorflow as tf
 from imutils.face_utils import FaceAligner
 from imutils.face_utils import rect_to_bb
-import age_inception_resnet_v1
-import gender_inception_resnet_v1
+import new_age_inception_resnet_v1
+import new_gender_inception_resnet_v1
+
+emotion_labels = {0:'angry',1:'disgust',2:'fear',3:'happy', 4:'sad',5:'surprise',6:'neutral'}
+emotion_keys = emotion_labels.values()
 
 def preprocess_input(x, v2=True):
     x = x.astype('float32')
@@ -22,20 +25,20 @@ def preprocess_input(x, v2=True):
 
 def eval(emotion_aligned_image, ga_aligned_image, emotion_model_path, age_model_path, gender_model_path):
 
-	#emotion
-	emotion_classifier = load_model(emotion_model_path, compile=False)
-	emotion_all = emotion_classifier.predict(gray_face).flatten().tolist()
-	emotion_dict = dict(zip(emotion_keys, emotion_all))
-	emotion_result = sorted(emotion_dict.items(), key=lambda d: d[1], reverse=True)
+    #emotion
+    emotion_classifier = load_model(emotion_model_path, compile=False)
+    emotion_all = emotion_classifier.predict(emotion_aligned_image).flatten().tolist()
+    emotion_dict = dict(zip(emotion_keys, emotion_all))
+    emotion_result = sorted(emotion_dict.items(), key=lambda d: d[1], reverse=True)
 
-	#age
+    #age
     with tf.Graph().as_default():
         sess = tf.Session()
         images_pl = tf.placeholder(tf.float32, shape=[None, 160, 160, 3], name='input_image')
         images = tf.map_fn(lambda frame: tf.reverse_v2(frame, [-1]), images_pl) #BGR TO RGB
         images_norm = tf.map_fn(lambda frame: tf.image.per_image_standardization(frame), images)
         train_mode = tf.placeholder(tf.bool)
-        age_logits = age_inception_resnet_v1.inference(images_norm, keep_probability=0.8,
+        age_logits, _ = new_age_inception_resnet_v1.inference(images_norm, keep_probability=0.8,
                                                                      phase_train=train_mode,
                                                                      weight_decay=1e-5)
         age_ = tf.cast(tf.constant([i for i in range(0, 101)]), tf.float32)
@@ -48,10 +51,11 @@ def eval(emotion_aligned_image, ga_aligned_image, emotion_model_path, age_model_
         if ckpt and ckpt.model_checkpoint_path:
             saver.restore(sess, ckpt.model_checkpoint_path)
             print("restore and continue training!")
+            age_result = sess.run([age], feed_dict={images_pl: ga_aligned_image, train_mode: False})
         else:
             pass
-        age_result = sess.run([age], feed_dict={images_pl: aligned_images, train_mode: False})
-
+        sess.close()
+        
     #gender
     with tf.Graph().as_default():
         sess = tf.Session()
@@ -59,7 +63,7 @@ def eval(emotion_aligned_image, ga_aligned_image, emotion_model_path, age_model_
         images = tf.map_fn(lambda frame: tf.reverse_v2(frame, [-1]), images_pl) #BGR TO RGB
         images_norm = tf.map_fn(lambda frame: tf.image.per_image_standardization(frame), images)
         train_mode = tf.placeholder(tf.bool)
-        gender_logits = gender_inception_resnet_v1.inference(images_norm, keep_probability=0.8,
+        gender_logits, _ = new_gender_inception_resnet_v1.inference(images_norm, keep_probability=0.8,
                                                                      phase_train=train_mode,
                                                                      weight_decay=1e-5)
         gender = tf.argmax(tf.nn.softmax(gender_logits), 1)
@@ -71,9 +75,10 @@ def eval(emotion_aligned_image, ga_aligned_image, emotion_model_path, age_model_
         if ckpt and ckpt.model_checkpoint_path:
             saver.restore(sess, ckpt.model_checkpoint_path)
             print("restore and continue training!")
+            gender_result = sess.run([gender], feed_dict={images_pl: ga_aligned_image, train_mode: False})
         else:
             pass
-        gender_result = sess.run([gender], feed_dict={images_pl: aligned_images, train_mode: False})
+        sess.close()
 
     return emotion_result, age_result, gender_result
 
@@ -89,33 +94,37 @@ def load_image(image_path, shape_predictor, detector_para, face_width, is_gray):
     if rect_nums == 0:
         return aligned_images, image, rect_nums, XY
     else:
-    	if is_gray:
-		    for i in range(rect_nums):
-		        aligned_image = fa.align(image, gray, rects[i])     
-		        aligned_gray = cv2.cvtColor(aligned_image, cv2.COLOR_BGR2GRAY) #if para is 64, it will return the shape (64, 64)
-		        gray_face = preprocess_input(aligned_gray, True)
-				gray_face = np.expand_dims(gray_face, 0) #it will return the shape (1, 64, 64)
-				gray_face = np.expand_dims(gray_face, -1) #it will return the shape (1, 64, 64, 1)
-				aligned_images.append(gray_face)
-	            (x, y, w, h) = rect_to_bb(rects[i])
-	            image = cv2.rectangle(image, (x, y), (x + w, y + h), color=(255, 0, 0), thickness=2) #draw a rectangle in the original image
-	            XY.append((x, y))	
-	        return np.array(aligned_images), image, rect_nums, XY			
+        if is_gray:
+            for i in range(rect_nums):
+                aligned_image = fa.align(image, gray, rects[i])     
+                aligned_gray = cv2.cvtColor(aligned_image, cv2.COLOR_BGR2GRAY) #if para is 64, it will return the shape (64, 64)
+                gray_face = preprocess_input(aligned_gray, True)
+                gray_face = np.expand_dims(gray_face, 0) #it will return the shape (1, 64, 64)
+                gray_face = np.expand_dims(gray_face, -1) #it will return the shape (1, 64, 64, 1)
+                aligned_images.append(gray_face)
+                (x, y, w, h) = rect_to_bb(rects[i])
+                image = cv2.rectangle(image, (x, y), (x + w, y + h), color=(255, 0, 0), thickness=2) #draw a rectangle in the original image
+                XY.append((x, y))    
+            return np.array(aligned_images), image, rect_nums, XY            
         else:
-	        for i in range(rect_nums):
-	            aligned_image = fa.align(image, gray, rects[i]) #if para is 160, it will return the shape (160, 160, 3)
-	            aligned_images.append(aligned_image)
-	            (x, y, w, h) = rect_to_bb(rects[i])
-	            image = cv2.rectangle(image, (x, y), (x + w, y + h), color=(255, 0, 0), thickness=2) #draw a rectangle in the original image
-	            XY.append((x, y))
-	        return np.array(aligned_images), image, rect_nums, XY
+            for i in range(rect_nums):
+                aligned_image = fa.align(image, gray, rects[i]) #if para is 160, it will return the shape (160, 160, 3)
+                aligned_images.append(aligned_image)
+                (x, y, w, h) = rect_to_bb(rects[i])
+                image = cv2.rectangle(image, (x, y), (x + w, y + h), color=(255, 0, 0), thickness=2) #draw a rectangle in the original image
+                XY.append((x, y))
+            return np.array(aligned_images), image, rect_nums, XY
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    # cp model.ckpt-3001*  ../../eval_script/models/age_models/
+    # cp fer2013_mini_XCEPTION.112-0.65.hdf5  ../../../eval_script/models/emotion_models/
+    # cp model.ckpt-11421*  ../../eval_script/models/gender_models/
+    # cp shape_predictor_68_face_landmarks.dat ../eval_script/models/
     parser.add_argument("--image_path", "--I", required=True, type=str, help="Image Path")
-    parser.add_argument("--emotion_model_path", "--M", default="./emotion_models/fer2013_mini_XCEPTION.112-0.65.hdf5", type=str, help="Emotion Model Path")
-    parser.add_argument("--gender_model_path", "--M", default="./gender_models", type=str, help="Gender Model Path")
-    parser.add_argument("--age_model_path", "--M", default="./age_models", type=str, help="Age Model Path")
+    parser.add_argument("--emotion_model_path", "--ME", default="./models/emotion_models/fer2013_mini_XCEPTION.112-0.65.hdf5", type=str, help="Emotion Model Path")
+    parser.add_argument("--gender_model_path", "--MG", default="./models/gender_models", type=str, help="Gender Model Path")
+    parser.add_argument("--age_model_path", "--MA", default="./models/age_models", type=str, help="Age Model Path")
     parser.add_argument("--shape_detector", "--S", default="./models/shape_predictor_68_face_landmarks.dat", type=str,
                         help="Shape Detector Path")
     parser.add_argument("--cuda", default=False, action="store_true",
@@ -131,20 +140,20 @@ if __name__ == '__main__':
     if not args.cuda:
         os.environ['CUDA_VISIBLE_DEVICES'] = ''
     else:
-    	os.environ['CUDA_VISIBLE_DEVICES'] = '6'
+        os.environ['CUDA_VISIBLE_DEVICES'] = '6'
 
 
     emotion_aligned_image, emotion_image, emotion_rect_nums, emotion_XY = load_image(args.image_path, args.shape_detector, args.emotion_para, args.emotion_width, True)
     ga_aligned_image, image, rect_nums, XY = load_image(args.image_path, args.shape_detector, args.ga_para, args.ga_width, False)
 
-	if (not emotion_aligned_image) or (not ga_aligned_image):
-		print("Face could not be found, Please confirm the frontal face.")
-	else:
-		emotions_result, age, gender = eval(emotion_aligned_image, ga_aligned_image, args.emotion_model_path, args.age_model_path, args.age_model_path)
-	    print("age:", age)
-	    print("genders:", gender)
-	    print("emotions_all", emotions_result)
-	    print("emotion_max", emotions_result[0])
+    # if (not emotion_aligned_image) or (not ga_aligned_image):
+    #     print("Face could not be found, Please confirm the frontal face.")
+    # else:
+    emotions_result, age, gender = eval(emotion_aligned_image[0], ga_aligned_image, args.emotion_model_path, args.age_model_path, args.gender_model_path)
+    print("age:", age)
+    print("genders:", gender)
+    print("emotions_all", emotions_result)
+    print("emotion_max", emotions_result[0])
 
 
 
@@ -201,15 +210,15 @@ if __name__ == '__main__':
 #         aligned_images.append(aligned_image)        
 #         aligned_gray = cv2.cvtColor(aligned_image, cv2.COLOR_BGR2GRAY)
 #         gray_face = preprocess_input(aligned_gray, True)
-# 		gray_face = np.expand_dims(gray_face, 0)
-# 		gray_face = np.expand_dims(gray_face, -1)
-# 		emotion_all = emotion_classifier.predict(gray_face).flatten().tolist()
-# 		emotion_dict = dict(zip(emotion_keys, emotion_all))
+#         gray_face = np.expand_dims(gray_face, 0)
+#         gray_face = np.expand_dims(gray_face, -1)
+#         emotion_all = emotion_classifier.predict(gray_face).flatten().tolist()
+#         emotion_dict = dict(zip(emotion_keys, emotion_all))
 #         emotion_sorted = sorted(emotion_dict.items(), key=lambda d: d[1], reverse=True)
-# 		print ("All emotions:")
-# 		print (emotion_sorted)
-# 		print ("Main emotion")
-# 		print (emotion_sorted[0])
+#         print ("All emotions:")
+#         print (emotion_sorted)
+#         print ("Main emotion")
+#         print (emotion_sorted[0])
 
 #         (x, y, w, h) = rect_to_bb(rects[i])
 #         #image = cv2.rectangle(image, (x, y), (x + w, y + h), color=(255, 0, 0), thickness=2)
