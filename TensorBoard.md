@@ -201,5 +201,3 @@ with tf.name_scope(name):
 - [TensorBoard Histogram Dashboard](https://www.tensorflow.org/get_started/tensorboard_histograms)
 - [Understanding TensorBoard (weight) histograms](https://stackoverflow.com/questions/42315202/understanding-tensorboard-weight-histograms)
 - [Hands-on TensorBoard (TensorFlow Dev Summit 2017)](https://www.youtube.com/watch?v=eBbEDRsCmv4&t=1105s)
-
-## END

@@ -1701,7 +1701,7 @@ with tf.Session() as sess:
 
 ##教程
 
-https://zhuanlan.zhihu.com/p/35515805
+Hands-On Machine Learning with Scikit-Learn and TensorFlow （按照此书进行学习）
 
 # References
 

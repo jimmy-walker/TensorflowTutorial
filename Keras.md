@@ -809,7 +809,7 @@ fit_generator(generator, steps_per_epoch=None, epochs=1, verbose=1, callbacks=No
 - **initial_epoch**: 开始训练的轮次（有助于恢复之前的训练）。
 
 ## Reference
-
+- [Keras官方介绍](https://www.tensorflow.org/guide/keras)
 - [keras：ImageDataGenerator的flow方法](https://blog.csdn.net/nima1994/article/details/80625938)
 - [Keras Image Data Augmentation 各参数详解](https://github.com/JustinhoCHN/keras-image-data-augmentation/blob/master/data_augmentation.ipynb)
 - [Keras中compile决定的acc和loss](https://github.com/keras-team/keras/issues/10426)
