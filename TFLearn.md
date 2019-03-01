@@ -34,6 +34,8 @@ dnn_clf.evaluate(X_test, y_test)
 
 ![](picture/softmax.png)
 
+![](picture/softmax derivative.png)
+
 
 ### 交叉熵
 
