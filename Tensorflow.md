@@ -1,19 +1,29 @@
 # Tensorflow
 
-**<u>所有的数学计算</u>**：先使用得到损失值$C$对输入的导数，这里的输入可以看做是下面的$y_4$，其实下面可以当做是计算$\frac{\partial C}{\partial y_4}$，涉及到交叉熵损失和softmax进行求导，只不过举了逻辑回归的例子。
+**<u>所有的数学计算</u>**：
+
+![](picture/model.jpg)
+
+先使用得到损失值$C$对输入的导数，这里的输入可以看做是下面的$y_4$，其实下面可以当做是计算$\frac{\partial C}{\partial y_4}$，涉及到交叉熵损失和softmax进行求导（见下方常用函数中softmax的讲解），只不过举了逻辑回归的例子（下面这个公式可以见machine learning中logistic regression的讲解）。
 
 $\frac{\partial}{\partial{\theta_j}}l(\theta)=\sum_{i=1}^{m}(y^{(i)}-h_\theta(x^{(i)}))x^{(i)}_j$
 
-然后逐步返回计算网络中C对各个参数的导数，<u>**注意，只对一个参数，就看这一路，不用管其他支路**</u>。
+然后逐步返回计算网络中C对各个参数的导数（可结合“梯度消失和梯度爆炸章节的推导”），<u>**注意，只对一个参数，就看这一路，不用管其他支路**</u>。
 $$
 \begin{align}
 &\frac{\partial C}{\partial b_1}=\frac{\partial C}{\partial y_4}\frac{\partial y_4}{\partial z_4}\frac{\partial z_4}{\partial x_4}\frac{\partial x_4}{\partial z_3}\frac{\partial z_3}{\partial x_3}\frac{\partial x_3}{\partial z_2}\frac{\partial z_2}{\partial x_2}\frac{\partial x_2}{\partial z_1}\frac{\partial z_1}{\partial b_1}\\
 &=\frac{\partial C}{\partial y_4}\sigma'\left(z_4\right)w_4\sigma'\left(z_3\right)w_3\sigma'\left(z_2\right)w_2\sigma'\left(z_1\right)
 \end{align}
 $$
-再进行移动，这就是反向传播的精髓，这里是举了逻辑回归的例子，**注意最后的公式中代入的值，其实就是训练数据输入和输出的值，如下面的$x^{(i)}$和$y^{(i)}$。**
+再进行移动，这就是反向传播的精髓，这里是举了逻辑回归的例子，**注意最后的公式中代入的值，其实就是训练数据输入和输出的值，如下面的$x^{(i)}$和$y^{(i)}$。**（下面这个公式可以见machine learning中logistic regression的讲解）
 
 $\theta_j=\theta_j+\alpha\sum_{i=1}^{m}(y^{(i)}-h_\theta(x^{(i)}))x^{(i)}_j=\theta_j+\alpha\sum_{i=1}^{m}(y^{(i)}-\frac{1}{1+e^{-{\theta^T}{x^{(i)}}}})x^{(i)}_j$
+
+J总结版：以分类为例。
+
+- **<u>根据输入，经过激活函数，最后输出，然后会根据softmax和交叉熵损失函数计算出损失函数。</u>**
+- **<u>然后计算损失函数对于softmax输入的求导，见tflearn.md中对于softmax的解释。</u>**
+- **<u>然后再利用上面第二个公式进行反向传播到具体的参数。上面的第一个第三个公式只是以激活函数为sigmoid作为例子来讲解一些具体情况，可以忽略。</u>**
 
 
 
