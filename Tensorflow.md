@@ -525,7 +525,7 @@ def softmax_cross_entropy_with_logits(_sentinel=None,  # pylint: disable=invalid
 - logits: 神经网络的最后一层输出，如果有batch的话，它的大小为[batch_size, num_classes], 单样本的话大小就是num_classes
 - labels: 样本的实际标签，大小与logits相同。且必须采用labels=y_，logits=y的形式将参数传入。
 
-具体的执行流程大概分为两步，第一步首先是对网络最后一层的输出做一个softmax，这一步通常是求取输出属于某一类的概率，对于单样本而言，就是输出一个num_classes大小的向量$[Y1,Y2,Y3,....]​$, 其中$Y1,Y2,Y3​$分别表示属于该类别的概率， softmax的公式为：
+具体的执行流程大概分为两步，第一步首先是对网络最后一层的输出做一个softmax，这一步通常是求取输出属于某一类的概率，对于单样本而言，就是输出一个num_classes大小的向量$[Y1,Y2,Y3,....]$, 其中$Y1,Y2,Y3$分别表示属于该类别的概率， softmax的公式为：
 
 ${\displaystyle softmax(x_i)={exp(x_i)\over{\sum_jexp(x_j)}}}$
 
@@ -542,7 +542,7 @@ $H_{y'}(y)=-\sum_i{y_i'}log(y_i)$
 
 此函数就等于计算到了上面的这一步，等于是算到了各个类的概率值：
 
-$softmax(x)_i={{exp(x_i)}\over{\sum_jexp(x_j)}}$
+$softmax(x)_i={exp(x_i)\over{\sum_jexp(x_j)}}$
 
 
 ###`tf.nn.in_top_k`
