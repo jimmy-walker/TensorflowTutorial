@@ -527,7 +527,7 @@ def softmax_cross_entropy_with_logits(_sentinel=None,  # pylint: disable=invalid
 
 具体的执行流程大概分为两步，第一步首先是对网络最后一层的输出做一个softmax，这一步通常是求取输出属于某一类的概率，对于单样本而言，就是输出一个num_classes大小的向量$[Y1,Y2,Y3,....]​$, 其中$Y1,Y2,Y3​$分别表示属于该类别的概率， softmax的公式为：
 
-${\displaystyle softmax(x_i)={{exp(x_i)}\over{\sum_jexp(x_j)}}}$
+${\displaystyle softmax(x_i)={exp(x_i)\over{\sum_jexp(x_j)}}}$
 
 第二步是对softmax输出的向量$[Y1,Y2,Y3,....]$和样本的实际标签做一个交叉熵，公式如下：
 
