@@ -327,3 +327,4 @@ Masked Multi-head Attention Layer里的mask操作和Transformer Encoder里隐去
 
 - [Attention和Transformer](https://zhuanlan.zhihu.com/p/38485843)
 - [Transformer](https://zhuanlan.zhihu.com/p/47510705)
+- [动图介绍](https://medium.com/@giacaglia/transformers-141e32e69591)
