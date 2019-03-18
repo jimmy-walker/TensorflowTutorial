@@ -14,6 +14,9 @@
   * [LSTM](LSTM.md) 
 * [Attention and Transformer](Attention and Transformer.md)
   * [Bert](Bert.md)
+  * [Bert code](Bert-Code.md)
 * [Keras](Keras.md)
+* [Estimator](Estimator.md)
 * [Tensorflow code](Tensorflow-Code.md)
+* [Example](Example.md)
 

@@ -89,7 +89,7 @@ def call_wake(time, func_name):
 call_wake("凌晨7点", wake_call)
 ```
 
-##Custom Estimators
+##Custom Estimators（Bert就是按此模式进行开发的）
 
 模型函数（即 `model_fn`）会实现机器学习算法。采用预创建的 Estimator 和自定义 Estimator 的唯一区别是：
 
@@ -117,8 +117,6 @@ call_wake("凌晨7点", wake_call)
 **Estimator的配置，如果不指定的话，则默认代表本地执行的配置**。
 
 The `config` argument can be passed [`tf.estimator.RunConfig`](https://www.tensorflow.org/api_docs/python/tf/estimator/RunConfig) object containing information about the execution environment. It is passed on to the `model_fn`, if the `model_fn` has a parameter named "config" (and input functions in the same manner). If the `config` parameter is not passed, it is instantiated by the `Estimator`. **Not passing config means that defaults useful for local execution are used.** `Estimator` makes config available to the model (for instance, to allow specialization based on the number of workers available), and also uses some of its fields to control internals, especially regarding checkpointing. 
-
-
 
 ## Reference
 
