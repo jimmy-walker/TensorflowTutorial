@@ -126,7 +126,7 @@ pip install --upgrade --ignore-installed tensorflow
 
 ##概念
 
-### 在图的构建阶段，设置初始值，然后设置梯度更新方法，最后设置`training_op`。然后在执行阶段，利用循环执行`sess.run(training_op)`就可以不断更新迭代了，此时不用考虑图中的初始值。最后用`best_theta.eval`把参数取出来即可。此外还有一个measure model的指标比如mse，因为这个指标是对所有样本而言的，常和tf.reduce_mean搭配使用
+### 在图的构建阶段，设置初始值，利用`tf.variable`设置更新哪些变量，然后设置梯度更新方法，最后设置`training_op`。然后在执行阶段，利用循环执行`sess.run(training_op)`就可以不断更新迭代了，此时不用考虑图中的初始值。最后用`best_theta.eval`把参数取出来即可。此外还有一个measure model的指标比如mse，因为这个指标是对所有样本而言的，常和tf.reduce_mean搭配使用
 
 ### 构造阶段和执行阶段
 A TensorFlow program is typically split into two parts: the first part builds a computation graph (this is called the construction phase), and the second part runs it (this is the execution phase).
@@ -1027,6 +1027,10 @@ training_op = optimizer.minimize(mse)  #assign the new value to variable
 `optimizer.minimize`：Add operations to minimize `loss` by updating `var_list`.
 
  **var_list**: Optional list or tuple of `Variable` objects to update to minimize `loss`. Defaults to the list of variables collected in the graph under the key `GraphKeys.TRAINABLE_VARIABLES`.
+
+注意对于`tf.variable`来说，其参数**trainable**: If `True`, the default, also adds the variable to the graph collection `GraphKeys.TRAINABLE_VARIABLES`. This collection is used as the default list of variables to use by the `Optimizer` classes.
+
+**J就是说用`tf.variable`就是设置需要优化的变量了。可用`tf.trainable_variables`召回所有的训练的变量。**
 
 ## 优化算法
 

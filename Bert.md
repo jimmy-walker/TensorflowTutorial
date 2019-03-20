@@ -55,6 +55,20 @@ Position embeddings和self-attention中用不一样，**self-attention中使用�
 
 ![](picture/bert3.jpg)
 
+## 参数解读
+
+```
+vocab_size: Vocabulary size of `inputs_ids` in `BertModel`. #词典大小
+hidden_size: Size of the encoder layers and the pooler layer.  transformer block中的一层的维度的大小
+num_hidden_layers: Number of hidden layers in the Transformer encoder.  就是堆叠的transformer block的个数
+num_attention_heads: Number of attention heads for each attention layer in
+the Transformer encoder. 就是attention中的head头数，子空间数
+intermediate_size: The size of the "intermediate" (i.e., feed-forward)
+layer in the Transformer encoder. 就是前向网络中的维度
+```
+
+
+
 ## Reference
 
 - [bert](https://zhuanlan.zhihu.com/p/46887114)

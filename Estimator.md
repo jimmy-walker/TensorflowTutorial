@@ -112,6 +112,16 @@ call_wake("凌晨7点", wake_call)
 
 要维护可在 CPU/GPU 或 Cloud TPU 上运行的模型，**最简单的方式是将模型的推理阶段（从输入到预测）定义在 `model_fn` 之外。然后，确保 `Estimator` 设置和 `model_fn` 的单独实现**，二者均包含此推理步骤。
 
+###EstimatorSpec
+
+而`EstimatorSpec`表示Ops and objects returned from a `model_fn` and passed to an `Estimator`. 
+
+Depending on the value of `mode`, different arguments are required. Namely
+
+- For `mode == ModeKeys.TRAIN`: required fields are `loss` and `train_op`.
+- For `mode == ModeKeys.EVAL`: required field is `loss`.
+- For `mode == ModeKeys.PREDICT`: required fields are `predictions`.
+
 ### Config
 
 **Estimator的配置，如果不指定的话，则默认代表本地执行的配置**。
@@ -123,6 +133,3 @@ The `config` argument can be passed [`tf.estimator.RunConfig`](https://www.te
 - [python基础之回调函数以及返回函数与闭包](https://blog.csdn.net/qq_29074261/article/details/80016788)
 - [Estimator](https://www.tensorflow.org/guide/estimators?hl=zh-cn#pre-made_estimators)
 - [创建自定义 Estimator](https://www.tensorflow.org/guide/custom_estimators?hl=zh-cn)
-```
-
-```

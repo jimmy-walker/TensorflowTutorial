@@ -4,6 +4,8 @@
 
 ##run_classifier.py
 
+主要过程就是：先定义好参数，然后利用数据类读取微调的数据文件，将其每一行转成InputExample对象，然后利用`file_based_convert_examples_to_features`保存到TFrecord中。然后定义好input_fn和model_fn给Estimator，进行推断。
+
 ### 定义参数
 
 其中`data_dir`即本次需要微调的新数据；`vocab_file`为bert模型预训练时候用的词典；`uncased`表示不保留大小写，都变成小写；`cased`表示保留大小写。
