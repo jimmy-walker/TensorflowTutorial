@@ -239,6 +239,20 @@ with tf.Session() as sess:
     result = f.eval()
 ```
 
+#### 常用语进行调试使用：
+
+```python
+import tensorflow as tf
+a = tf.constant(5.0)
+b = tf.constant(6.0)
+c = a * b
+with tf.Session():
+  # We can also use 'c.eval()' here.
+  print(c.eval())
+```
+
+
+
 ### 初始化（常用global_variables_initializer来代替每个变量.initializer）注意：只有变量才需要初始化Variable
 
 Calling `x.initializer.run()` is equivalent to calling `tf.get_default_session().run(x.initializer)`
@@ -472,6 +486,8 @@ array([ 2. ,  2.2,  2.4,  2.6,  2.8])
 
 Multiplies matrix `a` by matrix `b`, producing `a` * `b`.
 
+`transpose_a`和`transpose_b`表示是否相乘前进行转置矩阵。
+
 ### `tf.matrix_inverse`
 Computes the inverse of one or more square invertible matrices or their
 
@@ -578,7 +594,7 @@ with tf.Session() as sess:
 
 ###`tf.layers.dense`
 
-构建一个密集的图层。以神经元数量和激活函数作为参数。
+构建一个密集的图层。以神经元数量和激活函数作为参数。**J注意其中units表示输出的张量中的最后一个维度的大小。**
 
 This layer implements the operation: `outputs = activation(inputs.kernel + bias)` Where `activation` is the activation function passed as the `activation` argument (if not `None`), `kernel`is a weights matrix created by the layer, and `bias` is a bias vector created by the layer (only if `use_bias` is `True`).
 
@@ -736,6 +752,16 @@ reshape(t, [ 2, -1, 3]) ==> [[[1, 1, 1],
                              [[4, 4, 4],
                               [5, 5, 5],
                               [6, 6, 6]]]
+
+# tensor 't' is [[[1, 1, 1],
+#                 [2, 2, 2]],
+#                [[3, 3, 3],
+#                 [4, 4, 4]],
+#                [[5, 5, 5],
+#                 [6, 6, 6]]]
+# tensor 't' has shape [3, 2, 3]
+# pass '[-1]' to flatten 't'
+reshape(t, [-1]) ==> [1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5, 6, 6, 6]
 ```
 
 ### `tf.transpose`
@@ -910,6 +936,80 @@ squares = map_fn(lambda x: x * x, elems)
 This op computes `(x - mean) / adjusted_stddev`, where `mean` is the average of all values in image, and `adjusted_stddev = max(stddev, 1.0/sqrt(image.NumElements()))`.
 
 `stddev` is the standard deviation of all values in `image`. It is capped away from zero to protect against division by 0 when handling uniform images.
+
+### `tf.gather`
+
+类似于数组的索引，可以把向量中某些索引值提取出来，得到新的向量，适用于要提取的索引为不连续的情况。这个函数似乎只适合在一维的情况下使用。 
+
+```python
+import tensorflow as tf 
+
+a = tf.Variable([[1,2,3,4,5], [6,7,8,9,10], [11,12,13,14,15]])
+index_a = tf.Variable([0,2])
+
+b = tf.Variable([1,2,3,4,5,6,7,8,9,10])
+index_b = tf.Variable([2,4,6,8])
+
+with tf.Session() as sess:
+    sess.run(tf.global_variables_initializer())
+    print(sess.run(tf.gather(a, index_a)))
+    print(sess.run(tf.gather(b, index_b)))
+
+#  [[ 1  2  3  4  5]
+#   [11 12 13 14 15]]
+
+#  [3 5 7 9]
+```
+
+###`tf.nn.bias_add`
+
+Adds `bias` to `value`. 
+一个叫bias的向量加到一个叫value的矩阵上，是向量与矩阵的每一行进行相加，得到的结果和value矩阵大小相同。
+```python
+import tensorflow as tf
+ 
+a=tf.constant([[1,1],[2,2],[3,3]],dtype=tf.float32)
+b=tf.constant([1,-1],dtype=tf.float32)
+c=tf.constant([1],dtype=tf.float32)
+ 
+with tf.Session() as sess:
+    print('bias_add:')
+    print(sess.run(tf.nn.bias_add(a, b)))
+    #执行下面语句错误
+    #print(sess.run(tf.nn.bias_add(a, c)))
+```
+
+输出结果：
+
+```
+bias_add:
+[[ 2. 0.]
+[ 3. 1.]
+[ 4. 2.]]
+```
+
+###`tf.nn.log_softmax`
+
+就是对softmax的结果，进行log计算。计算公式为：`logsoftmax = logits - log(reduce_sum(exp(logits), axis)) `，前者是因为与log抵消了，所以提取出来。
+
+由于softmax输出都是0-1之间的，因此logsofmax输出的是小于0的数，
+
+###`tf.one_hot`
+
+Returns a one-hot tensor. 
+
+tf.one_hot()函数规定输入的元素indices从0开始，最大的元素值不能超过（depth - 1），因此能够表示（depth + 1）个单位的输入。若输入的元素值超出范围，输出的编码均为 [0, 0 … 0, 0]。
+
+indices = 0 对应的输出是[1, 0 … 0, 0], indices = 1 对应的输出是[0, 1 … 0, 0], 依次类推，最大可能值的输出是[0, 0 … 0, 1].
+```python
+indices = [0, 1, 2]
+depth = 3
+tf.one_hot(indices, depth)  # output: [3 x 3]
+# [[1., 0., 0.],
+#  [0., 1., 0.],
+#  [0., 0., 1.]]
+```
+
 
 
 ## 数据标准化

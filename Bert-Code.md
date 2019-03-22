@@ -815,6 +815,372 @@ def file_based_input_fn_builder(input_file, seq_length, is_training,
 estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
 ```
 
+##modeling.py
+
+###Bert构造函数
+
+输入向量的说明：**对于一个输入向量，如果是两个句子的任务，则是拼接在一个向量中，如下所示，然后如果有位置不足的，就补充pad0假数据，因此首先需要判断哪些是假数据，然后再对真数据判断，哪两句话。而batch_size就是表示有多少个输入向量一起进入训练，表示并行训练，一个batch内的输入向量不会互相干扰，只是最后算loss更新时候会用到对所有输入向量的结果进行汇总。**
+
+```
+1. tokens = ["[CLS], "it", "is" "a", "[MASK]", "day", "[SEP]", "I", "apple", "to", "go", "out", "[SEP]"]
+而input_ids就是把上述变成id的形式，方便输入网络训练。
+而input_mask中mask是1表示是"真正"的Token，0则是Padding出来的。
+2. segment_ids=[0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1]
+其表示两个不同句子
+3. is_random_next=False
+4. masked_lm_positions=[4, 8, 9] 
+   表示Mask后为["[CLS], "it", "is" "a", "[MASK]", "day", "[SEP]", "I", "[MASK]", "to", "go", "out", "[SEP]"]
+masked_lm_positions记录哪些位置被Mask了。
+5. masked_lm_labels=["good", "want", "to"]
+而masked_lm_labels记录被Mask之前的词。
+```
+
+其中`all_encoder_layers`就是把每个transformer block的输出值保存下来。
+
+`BertModel.sequence_output` 是取最后attenion层的输出。` BertModel.pooled_output` 取`sequence_output`的第一个token“CLS”的emb，然后加个连接层。 
+
+```python
+def __init__(self,
+		  config,
+		  is_training,
+		  input_ids,
+		  input_mask=None,
+		  token_type_ids=None,
+		  use_one_hot_embeddings=True,
+		  scope=None): 
+
+  # Args:
+  #       config: `BertConfig` 对象
+  #       is_training: bool 表示训练还是eval，是会影响dropout
+  #	  input_ids: int32 Tensor  shape是[batch_size, seq_length]
+  #	  input_mask: (可选) int32 Tensor shape是[batch_size, seq_length]
+  #	  token_type_ids: (可选) int32 Tensor shape是[batch_size, seq_length]
+  #	  use_one_hot_embeddings: (可选) bool
+  #		  如果True，使用矩阵乘法实现提取词的Embedding；否则用tf.embedding_lookup()
+  #		  对于TPU，使用前者更快，对于GPU和CPU，后者更快。
+  #	  scope: (可选) 变量的scope。默认是"bert"
+  
+  # Raises:
+  #	  ValueError: 如果config或者输入tensor的shape有问题就会抛出这个异常
+
+  config = copy.deepcopy(config) #对config(BertConfig对象)深度拷贝一份
+  if not is_training: #如果不是训练，那么把dropout都置为零
+	  config.hidden_dropout_prob = 0.0
+	  config.attention_probs_dropout_prob = 0.0
+  
+  input_shape = get_shape_list(input_ids, expected_rank=2) #get_shape_list就是得到该输入向量的具体维度，以便下面用到
+  batch_size = input_shape[0]
+  seq_length = input_shape[1]
+  #如果输入的input_mask为None，那么构造一个shape合适值全为1的input_mask，这表示输入都是”真实”的输入，没有padding的内容。
+  if input_mask is None:
+	  input_mask = tf.ones(shape=[batch_size, seq_length], dtype=tf.int32)
+  #如果token_type_ids为None，那么构造一个shape合适并且值全为0的tensor，表示所有Token都属于第一个句子。
+  if token_type_ids is None:
+	  token_type_ids = tf.zeros(shape=[batch_size, seq_length], dtype=tf.int32)
+  
+  with tf.variable_scope(scope, default_name="bert"):
+	  with tf.variable_scope("embeddings"):
+		  # 词的Embedding lookup 
+		  (self.embedding_output, self.embedding_table) = embedding_lookup(
+				  input_ids=input_ids,
+				  vocab_size=config.vocab_size,
+				  embedding_size=config.hidden_size,
+				  initializer_range=config.initializer_range,
+				  word_embedding_name="word_embeddings",
+				  use_one_hot_embeddings=use_one_hot_embeddings)
+		  
+		  # 增加位置embeddings和token type的embeddings，然后是
+		  # layer normalize和dropout。
+		  self.embedding_output = embedding_postprocessor(
+				  input_tensor=self.embedding_output,
+				  use_token_type=True,
+				  token_type_ids=token_type_ids,
+				  token_type_vocab_size=config.type_vocab_size,
+				  token_type_embedding_name="token_type_embeddings",
+				  use_position_embeddings=True,
+				  position_embedding_name="position_embeddings",
+				  initializer_range=config.initializer_range,
+				  max_position_embeddings=config.max_position_embeddings,
+				  dropout_prob=config.hidden_dropout_prob)
+	  
+	  with tf.variable_scope("encoder"):
+		  # 把shape为[batch_size, seq_length]的2D mask变成
+		  # shape为[batch_size, seq_length, seq_length]的3D mask
+		  # 以便后向的attention计算，读者可以对比之前的Transformer的代码。
+		  attention_mask = create_attention_mask_from_input_mask(
+				  input_ids, input_mask)
+		  
+		  # 多个Transformer模型stack起来。
+		  # all_encoder_layers是一个list，长度为num_hidden_layers（默认12），每一层对应一个值。
+		  # 每一个值都是一个shape为[batch_size, seq_length, hidden_size]的tensor。
+		  
+		  self.all_encoder_layers = transformer_model(
+			  input_tensor=self.embedding_output,
+			  attention_mask=attention_mask, #传入到transformer中
+			  hidden_size=config.hidden_size,
+			  num_hidden_layers=config.num_hidden_layers,
+			  num_attention_heads=config.num_attention_heads,
+			  intermediate_size=config.intermediate_size,
+			  intermediate_act_fn=get_activation(config.hidden_act),
+			  hidden_dropout_prob=config.hidden_dropout_prob,
+			  attention_probs_dropout_prob=config.attention_probs_dropout_prob,
+			  initializer_range=config.initializer_range,
+			  do_return_all_layers=True)
+	  
+	  # `sequence_output` 是最后一层的输出，shape是[batch_size, seq_length, hidden_size]
+	  self.sequence_output = self.all_encoder_layers[-1]
+
+	  with tf.variable_scope("pooler"):
+		  # 取最后一层的第一个时刻[CLS]对应的tensor
+		  # 从[batch_size, seq_length, hidden_size]变成[batch_size, hidden_size]
+		  # sequence_output[:, 0:1, :]得到的是[batch_size, 1, hidden_size]
+		  # 我们需要用squeeze把第二维去掉。
+		  first_token_tensor = tf.squeeze(self.sequence_output[:, 0:1, :], axis=1)
+		  # 然后再加一个全连接层，输出仍然是[batch_size, hidden_size]
+		  self.pooled_output = tf.layers.dense(
+				  first_token_tensor,
+				  config.hidden_size,
+				  activation=tf.tanh,
+				  kernel_initializer=create_initializer(config.initializer_range))
+```
+
+#### embedding_lookup函数用于实现词的Embedding，即从词变成id 
+
+Embedding本来很简单，使用tf.nn.embedding_lookup就行了。但是为了优化TPU，它还支持使用矩阵乘法来提取词向量。另外为了提高效率，输入的shape除了[batch_size, seq_length]外，它还增加了一个维度变成[batch_size, seq_length, num_inputs]。**如果不关心细节，我们把这个函数当成黑盒，那么我们只需要知道它的输入input_ids(可能)是[8, 128]，输出是[8, 128, 768]就可以了，此外这里还返回了随机初始化的embedding_table**。 
+
+```python
+def embedding_lookup(input_ids,
+			vocab_size,
+			embedding_size=128,
+			initializer_range=0.02,
+			word_embedding_name="word_embeddings",
+			use_one_hot_embeddings=False):
+	"""word embedding
+	
+	Args:
+		input_ids: int32 Tensor shape为[batch_size, seq_length]，表示WordPiece的id
+		vocab_size: int 词典大小，需要与vocab.txt一致 
+		embedding_size: int embedding后向量的大小 
+		initializer_range: float 随机初始化的范围 
+		word_embedding_name: string 名字，默认是"word_embeddings"
+		use_one_hot_embeddings: bool 如果True，使用one-hot方法实现embedding；否则使用 		
+			`tf.nn.embedding_lookup()`. TPU适合用One hot方法。
+	
+	Returns:
+		float Tensor shape为[batch_size, seq_length, embedding_size]
+	"""
+	# 这个函数假设输入的shape是[batch_size, seq_length, num_inputs]
+	# 普通的Embeding一般假设输入是[batch_size, seq_length]，
+	# 增加num_inputs这一维度的目的是为了一次计算更多的Embedding
+	# 但目前的代码并没有用到，传入的input_ids都是2D的，这增加了代码的阅读难度。
+	
+	# 如果输入是[batch_size, seq_length]，
+	# 那么我们把它 reshape成[batch_size, seq_length, 1]
+	if input_ids.shape.ndims == 2:
+		input_ids = tf.expand_dims(input_ids, axis=[-1])
+	
+	# 构造Embedding矩阵，shape是[vocab_size, embedding_size]，随机初始化一个张量embedding_table
+	embedding_table = tf.get_variable(
+		name=word_embedding_name,
+		shape=[vocab_size, embedding_size],
+		initializer=create_initializer(initializer_range))
+	
+	if use_one_hot_embeddings:
+		flat_input_ids = tf.reshape(input_ids, [-1])
+		one_hot_input_ids = tf.one_hot(flat_input_ids, depth=vocab_size)
+		output = tf.matmul(one_hot_input_ids, embedding_table)
+	else:
+		output = tf.nn.embedding_lookup(embedding_table, input_ids) #tf.nn.embedding_lookup选取一个张量里面索引对应的元素
+	
+	input_shape = get_shape_list(input_ids)
+	# 把输出从[batch_size, seq_length, num_inputs(这里总是1), embedding_size]
+	# 变成[batch_size, seq_length, num_inputs*embedding_size]
+	output = tf.reshape(output,
+				input_shape[0:-1] + [input_shape[-1] * embedding_size])
+	return (output, embedding_table)
+```
+
+
+
+#### create_attention_mask_from_input_mask函数用于构造Mask矩阵，解决对pad的非真实词进行忽略
+
+用途：在计算Self-Attention的时候每一个样本都需要一个Attention Mask矩阵，表示每一个时刻可以attend to的范围，1表示可以attend，0表示是padding的。
+
+	Args:
+		from_tensor: 2D or 3D Tensor，shape为[batch_size, from_seq_length, ...].
+		to_mask: int32 Tensor， shape为[batch_size, to_seq_length].
+	
+	Returns:
+		float Tensor，shape为[batch_size, from_seq_length, to_seq_length]
+比如调用它时的两个参数是是：
+
+```
+input_ids=[
+	[1,2,3,0,0],
+	[1,3,5,6,1]
+]
+input_mask=[
+	[1,1,1,0,0],
+	[1,1,1,1,1]
+]
+```
+
+表示这个batch有两个样本，第一个样本长度为3(padding了2个0)，第二个样本长度为5。**在计算Self-Attention的时候每一个样本都需要一个Attention Mask矩阵，表示每一个时刻可以attend to的范围，1表示可以attend，0表示是padding的**(或者在机器翻译的Decoder中不能attend to未来的词)。对于上面的输入，这个函数返回一个shape是[2, 5, 5]的tensor，分别代表两个Attention Mask矩阵。
+
+```
+[
+	[1, 1, 1, 0, 0], #它表示第1个词可以attend to 3个词
+	[1, 1, 1, 0, 0], #它表示第2个词可以attend to 3个词
+	[1, 1, 1, 0, 0], #它表示第3个词可以attend to 3个词
+	[1, 1, 1, 0, 0], #无意义，因为输入第4个词是padding的0
+	[1, 1, 1, 0, 0]  #无意义，因为输入第5个词是padding的0
+]
+
+[
+	[1, 1, 1, 1, 1], # 它表示第1个词可以attend to 5个词
+	[1, 1, 1, 1, 1], # 它表示第2个词可以attend to 5个词
+	[1, 1, 1, 1, 1], # 它表示第3个词可以attend to 5个词
+	[1, 1, 1, 1, 1], # 它表示第4个词可以attend to 5个词
+	[1, 1, 1, 1, 1]	 # 它表示第5个词可以attend to 5个词
+]
+```
+
+比如前面举的例子，broadcast_ones的shape是[2, 5, 1]，值全是1，而to_mask是
+
+```
+to_mask=[
+[1,1,1,0,0],
+[1,1,1,1,1]
+]
+```
+
+shape是[2, 5]，reshape为[2, 1, 5]。然后broadcast_ones * to_mask就得到[2, 5, 5]，正是我们需要的两个Mask矩阵，读者可以验证。注意**[batch, A, B]*[batch, B, C]=[batch, A, C]**，我们可以认为是batch个[A, B]的矩阵乘以batch个[B, C]的矩阵。
+
+```python
+def create_attention_mask_from_input_mask(from_tensor, to_mask):
+	"""Create 3D attention mask from a 2D tensor mask.
+	
+	Args:
+		from_tensor: 2D or 3D Tensor，shape为[batch_size, from_seq_length, ...].
+		to_mask: int32 Tensor， shape为[batch_size, to_seq_length].
+	
+	Returns:
+		float Tensor，shape为[batch_size, from_seq_length, to_seq_length].
+	"""
+	from_shape = get_shape_list(from_tensor, expected_rank=[2, 3])
+	batch_size = from_shape[0]
+	from_seq_length = from_shape[1]
+	
+	to_shape = get_shape_list(to_mask, expected_rank=2)
+	to_seq_length = to_shape[1]
+	
+	to_mask = tf.cast(
+		tf.reshape(to_mask, [batch_size, 1, to_seq_length]), tf.float32)
+	
+	# `broadcast_ones` = [batch_size, from_seq_length, 1]
+	broadcast_ones = tf.ones(
+		shape=[batch_size, from_seq_length, 1], dtype=tf.float32)
+	
+	# Here we broadcast along two dimensions to create the mask.
+	mask = broadcast_ones * to_mask
+	
+	return mask
+```
+
+##run_pretraining.py
+
+get_masked_lm_output函数用于计算语言模型的Loss(Mask位置预测的词（即最后一层的输出向量model.get_sequence_output() ）和真实的词是否相同)
+
+`model.get_sequence_output()`的shape是：[batch_size, seq_length, hidden_size]。
+
+**其中表示为：batch_size是一个批次内的样本数（向量数），比如8。**
+
+**而hidden_size则是每一个token被表示成的向量维度（就是一个transformer encoder中一层的维度），比如768。**
+
+**而seq_length则表示有多少个transformer encoder在一个transformer block中。**
+
+`model.get_embedding_table()`的shape是：[vocab_size, embedding_size]。
+
+表示为这些词典中的词随机初始化的向量，embedding_size表示为768。
+
+masked_lm_positions表示mask词的位置，shape是[batch_size, masked_length]
+
+masked_lm_ids表示mask词的id，shape是[batch_size, masked_length]
+
+masked_lm_weights表示哪些是真mask，哪些是没有mask，shape是[batch_size, masked_length]
+
+```python
+    (masked_lm_loss,
+     masked_lm_example_loss, masked_lm_log_probs) = get_masked_lm_output(
+         bert_config, model.get_sequence_output(), model.get_embedding_table(),
+         masked_lm_positions, masked_lm_ids, masked_lm_weights)
+
+def get_masked_lm_output(bert_config, input_tensor, output_weights, positions,
+			label_ids, label_weights):
+	"""得到masked LM的loss和log概率"""
+	# 只需要Mask位置的Token的输出。
+	input_tensor = gather_indexes(input_tensor, positions) #返回的格式应该为[batch_size * masked_length, hidden_size]
+	
+	with tf.variable_scope("cls/predictions"):
+		# 在输出之前再加一个非线性变换，这些参数只是用于训练，在Fine-Tuning的时候就不用了。
+		with tf.variable_scope("transform"):#貌似论文里这块没有讲!!!!!!!!!!!!!!!!!!!!
+			input_tensor = tf.layers.dense( #全连接层，常用于最后限定输出维度
+					input_tensor,
+					units=bert_config.hidden_size, #表示输出的张量中的最后一个维度的大小
+					activation=modeling.get_activation(bert_config.hidden_act),
+					kernel_initializer=modeling.create_initializer(
+						bert_config.initializer_range))
+			input_tensor = modeling.layer_norm(input_tensor) #调用tf.contrib.layers.layer_norm，实现多加一层Layer Normalization 
+            #针对 batch normalization 存在的问题 提出了 Layer Normalization 进行改进的。
+		
+		# output_weights是复用输入的word Embedding，所以是传入的，J就是用之前初始化的词向量
+		# 这里再多加一个bias。
+		output_bias = tf.get_variable(
+				"output_bias",
+				shape=[bert_config.vocab_size], #因为是加到行上，所以是列的维度
+				initializer=tf.zeros_initializer())
+		logits = tf.matmul(input_tensor, output_weights, transpose_b=True) #[batch_size*masked_length,vocab_size] #余弦相似度等于是用相乘来判断与哪些词汇的相似概率最大。每一个预测到的mask的词汇都得到与所有vocab的之间的乘积结果。当角度为0时，二者重合，最相近，此时其余弦值也最大为1。
+        #注意在训练阶段，因为model.get_embedding_table也是变量会不断变化的，所以意味着预测的越来越准！！！！！！！！
+        ##J注意而在predict中这里是因为已经导入了bert训练好的模型的embedding_table，所以loss值直接计算出来，另外output_bias也是，注意这两者都是共享变量的方式导入。
+		logits = tf.nn.bias_add(logits, output_bias) #再给他们加一个向量，每行加一个偏置项
+		log_probs = tf.nn.log_softmax(logits, axis=-1) #返回仍是[batch_size*masked_length,vocab_size]
+        #就是用logsoftmax变成损失值
+		#J注意即masked_length表示是最大的mask的token数，不一定全部mask了，所以要配合label_weights一起计算，这里label_weights has a value of 1.0 for every real prediction and 0.0 for the padding predictions.。即对label_ids进行进一步过滤。
+		# label_ids的长度是20，表示最大的MASK的Token数
+		# label_ids里存放的是MASK过的Token的id
+		label_ids = tf.reshape(label_ids, [-1]) #把这些token id进行平铺成一维[batch_size*masked_length]
+		label_weights = tf.reshape(label_weights, [-1]) #把这些token 真假的标志进行平铺成一维 [batch_size*masked_length]
+		
+		one_hot_labels = tf.one_hot(
+			label_ids, depth=bert_config.vocab_size, dtype=tf.float32)
+		#返回为[batch_size*masked_length , vocab_size] 即不用实际向量表示了，用独热编码表示了
+		# 但是由于实际MASK的可能不到20，比如只MASK18，那么label_ids有2个0(padding)
+		# 而label_weights=[1, 1, ...., 0, 0]，说明后面两个label_id是padding的，计算loss要去掉。
+		per_example_loss = -tf.reduce_sum(log_probs * one_hot_labels, axis=[-1]) #只去记录真实词对应的loss损失，然后reduce就会把其他0*loss+真实词*loss汇总起来，最后取负数，越大说明损失越大。返回：[batch_size*masked_length]
+		numerator = tf.reduce_sum(label_weights * per_example_loss) #利用label_weights进行区分哪些是真实的，返回一个数
+		denominator = tf.reduce_sum(label_weights) + 1e-5 #表示真实词的数目，其中1e-5表示不能使得概率为1
+		loss = numerator / denominator
+	
+	return (loss, per_example_loss, log_probs)
+
+def gather_indexes(sequence_tensor, positions):
+  """Gathers the vectors at the specific positions over a minibatch."""
+  sequence_shape = modeling.get_shape_list(sequence_tensor, expected_rank=3)
+  batch_size = sequence_shape[0] #将model.get_sequence_output()的shape是：[batch_size, seq_length, hidden_size]分别提取到，8
+  seq_length = sequence_shape[1] #128
+  width = sequence_shape[2] #768
+
+  flat_offsets = tf.reshape(
+      tf.range(0, batch_size, dtype=tf.int32) * seq_length, [-1, 1]) #变成[[0], [128] ..., [896]]形式，这样就知道batch中每个样本（句子向量）的开始位置，每个都是128
+  flat_positions = tf.reshape(positions + flat_offsets, [-1]) #假设positions[4,6,9]变成[  4   6   9 132 134 137 260 262 265 388 390 393 516 518 521 644 646 649 772 774 777 900 902 905] 这样就知道了具体句子中哪些是mask的词，所有句子都是一样的
+  flat_sequence_tensor = tf.reshape(sequence_tensor,
+                                    [batch_size * seq_length, width]) #等于是把model.get_sequence_output()中batch的样本，按照上述样式，拼接起来，就可以知道mask的词语的被预测的向量值了。
+  output_tensor = tf.gather(flat_sequence_tensor, flat_positions)
+  return output_tensor #返回的格式应该为： [batch_size * masked_length, hidden_size]
+```
+
+
+
 ## Reference
 
 - [BERT代码阅读](http://fancyerii.github.io/2019/03/09/bert-codes/)
@@ -1738,3 +2104,5 @@ if __name__ == "__main__":
   tf.app.run()
 
 ```
+
+
