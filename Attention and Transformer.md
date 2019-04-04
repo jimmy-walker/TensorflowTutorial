@@ -130,11 +130,11 @@ Encoder里的Scaled Dot-Product Attention可以理解为对token向量进行信�
 
 这里笔者以提炼第一个位置的token向量举例，展示Scaled Dot-Product Attention的具体步骤：
 
-**1.** 对第一位置的token向量提炼出一个关于它的问题(query)（**J注意：这里与上面定义的attention的计算不一致，因为这里只用输入值，而不是解码器decoder的隐状态s**）
+**1.** 对第一位置的token向量提炼出一个关于它的问题(query)（**<u>J注意：这里与上面定义的attention的计算不一致，因为这里只用输入值，而不是解码器decoder的隐状态s，因为这里的编码器和解码器就是attention，不需要隐状态了。</u>**）
 
 $q_{1}=W_{q}x_{1} \tag{2.3}$
 
-**2.** 每个位置的token向量（包括第一位置的token自己）都会事先准备好自己的回答（key, value) （**J注意：这里与上面定义的attention的计算不一致，因为这里只用输入值，而不是编码器encoder的隐状态h**）（这里准备好的回答是属于一次生成，到处使用，即之后轮到提炼第二个位置的token向量时，参考的回答还是这套回答集$ \left( K~, ~ V \right)$
+**2.** 每个位置的token向量（包括第一位置的token自己）都会事先准备好自己的回答（key, value) （**<u>J注意：这里与上面定义的attention的计算不一致，因为这里只用输入值，而不是编码器encoder的隐状态h，因为这里的编码器和解码器就是attention，不需要隐状态了</u>**）（这里准备好的回答是属于一次生成，到处使用，即之后轮到提炼第二个位置的token向量时，参考的回答还是这套回答集$ \left( K~, ~ V \right)$
 
 $\begin{aligned}k_{i}=&W_{k}x_{i}~~~~~,~i=1,2,\ldots ,n   \\ K=&\begin{bmatrix} k_{1} & k_{2} & \ldots & k_{n} \end{bmatrix}\end{aligned} \tag{2.4}$
 
@@ -154,13 +154,48 @@ $a_{1i}=\dfrac {\exp^{score\left( q_{1},k_{i}\right) }}{\sum ^{n}_{j=1}\exp^{sco
 
 这里除以$\sqrt{d}$的原因由于softmax（2.7）是一个会饱和的激活函数，为避免输入进入饱和区域，所以对$\langle q_1, k_i\rangle$的结果进行标准化（论文中假设$q, k$为相互独立的$\mu=0, {\sigma}^2=1$) 的向量，这个可以由Layer Normalization 去接近。则$\langle q_{i},k_{i} \rangle=\sum ^{d}_{j=1}q_{ij}\cdot k_{ij}$为$\mu=0, {\sigma}^2=d$的向量）
 
+![](picture/softmax function.png)
+
+```python
+# Required Python Packages
+import numpy as np
+import matplotlib.pyplot as plt
+def softmax(inputs):
+ “””
+ Calculate the softmax for the give inputs (array)
+ :param inputs:
+ :return:
+ “””
+ return np.exp(inputs) / float(sum(np.exp(inputs)))
+def line_graph(x, y, x_title, y_title):
+ “””
+ Draw line graph with x and y values
+ :param x:
+ :param y:
+ :param x_title:
+ :param y_title:
+ :return:
+ “””
+ plt.plot(x, y)
+ plt.xlabel(x_title)
+ plt.ylabel(y_title)
+ plt.show()
+graph_x = range(0, 21)
+graph_y = softmax(graph_x)
+print (“Graph X readings: {}”.format(graph_x))
+print (“Graph Y readings: {}”.format(graph_y))
+line_graph(graph_x, graph_y, “Inputs”, “Softmax Scores”)
+```
+
+
+
 **4.** 将每个token向量的回答根据上一步得到的相关性系数$a_{1i}$进行汇总得到最终答案，即经过信息提炼后第一位置的token的新向量
 $x_{1}^{'}=\sum ^{n}_{i=1}a_{1i}\times v_{i} \tag{2.8}$
 
 **关于在图2.3中Scaled Dot-Product Attention的Mask操作：**
 
 因为训练时基本是使用mini batch的方式，这就需要对token数量较少的sequence用<PAD>在尾部填充使得batch里的每个句子长度相同
-在Encoder环节去除<PAD>对句子中其他token的影响是在Scaled Dot-Product 结束后紧跟一个mask操作（即对<PAD>的score减去一个极大值---e.g. 1E+9，使得softmax输出的<PAD>token的相关性系数接近 0）
+在Encoder环节去除<PAD>对句子中其他token的影响是在Scaled Dot-Product 结束后紧跟一个mask操作（即对<PAD>的score减去一个极大值---e.g. 1E+9，使得softmax输出的<PAD>token的相关性系数接近 0，如图像中的softmax的饱和区（左侧））
 
 对于没有<PAD>填充的句子则Mask操作就可以忽略，所以Mask操作是optional的
 
@@ -187,7 +222,7 @@ $Attention \left( Q, K, V \right)$的结果即是各token向量经过提炼后�
 
 **J注意下图中的h就是**`num_attention_heads: Number of attention heads for each attention layer in the Transformer encoder.`
 
-上面Scaled Dot-Product Attention例子已经实现了将**每个token所对应的1个query并行计算，从而达到同时对每个token向量进行信息提炼**。（**J理解就是输入的token向量因为有很多组成：句子、词义等，所以就将分成多个子空间进行计算不同query（但实际其实各个子空间都是一样的维度，看下文的transformer译文就可以知道了！），注意这就是multi-head的意义**）
+上面Scaled Dot-Product Attention例子已经实现了将**每个token所对应的1个query并行计算，从而达到同时对每个token向量进行信息提炼**。（**J理解就是输入的token向量因为有很多组成：句子、词义等，所以就将分成多个子空间进行计算不同query（但实际其实各个子空间都是一样的维度，看下文的transformer译文就可以知道了！），注意这就是multi-head的意义，见下面章节的“多头巨兽”，特别是其中的图片解释，类似其他一些系统，比如FFM中的领域隐变量方法。**）
 
 Multi-Head更近了一步：**可以实现将每个token所对应的h个queries并行计算，从而达到同时对每个token向量进行多方面的信息提炼**。
 
@@ -476,7 +511,7 @@ Next，我们选择一个简短的句子来解释编码器的每个子层是怎�
 
 这让我们遇到了一点小困难。 feed-forward 层的输入是一个矩阵而不是八个矩阵。所以我们需要把这八个矩阵组合成单个矩阵。
 
-我们该怎么做？把这八个矩阵拼接起来然后乘以额外的特征矩阵 WO。（**J注意这就是前向网络的作用。**）
+我们该怎么做？把这八个矩阵拼接起来然后乘以额外的特征矩阵 WO。（**~~J注意这就是前向网络的作用~~。<u>我本以为是结果发现是送进去到feed-forward前的数据维度准备</u>。**）
 
 ![](picture/transformer_attention_heads_weight_matrix_o.png)
 

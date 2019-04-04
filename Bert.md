@@ -31,7 +31,7 @@ Position embeddings和self-attention中用不一样，**self-attention中使用�
 
 [CLS]表示的是特殊分类嵌入，它是Transformer的输出。对于句子级分类任务，[CLS]就是输入序列的固定维度的表示(就像词向量直接拼成句向量再输入模型中一样)。对于非分类的任务，则忽略此向量。
 
-##模型架构
+##模型架构（BERT里每一个Trm基本上就是self-attention的编码器结构）
 
 ![img](picture/bert1.jpg)图2 模型框架
 
@@ -59,12 +59,12 @@ Position embeddings和self-attention中用不一样，**self-attention中使用�
 
 ```
 vocab_size: Vocabulary size of `inputs_ids` in `BertModel`. #词典大小
-hidden_size: Size of the encoder layers and the pooler layer.  transformer block中的一层的维度的大小
-num_hidden_layers: Number of hidden layers in the Transformer encoder.  就是堆叠的transformer block的个数
+hidden_size: Size of the encoder layers and the pooler layer.  transformer block中的一层的维度的大小。J决定了词向量的大小。
+num_hidden_layers: Number of hidden layers in the Transformer encoder.就是transformer内堆叠的attention block的个数。注意，bert是双向的transformer模块的连接。所以上图花了两层trm。
 num_attention_heads: Number of attention heads for each attention layer in
 the Transformer encoder. 就是attention中的head头数，子空间数
 intermediate_size: The size of the "intermediate" (i.e., feed-forward)
-layer in the Transformer encoder. 就是前向网络中的维度
+layer in the Transformer encoder. 就是前向网络中的维度，放大到多大的维度，然后再转回去。J这里本以为这是要把多头的输出进行整合到固定输出，后来发现不是，有一个W已经在输入feed forward前就把数据维度整合好了，这里只是为了投影到高纬空间，然后使用relu来进行提取信息。
 ```
 
 
