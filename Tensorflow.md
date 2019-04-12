@@ -1010,6 +1010,34 @@ tf.one_hot(indices, depth)  # output: [3 x 3]
 #  [0., 0., 1.]]
 ```
 
+###`tf.reduce_sum`
+```python
+reduce_sum应该理解为压缩求和，用于降维
+
+# 'x' is [[1, 1, 1]
+
+#         [1, 1, 1]]
+
+#求和
+
+tf.reduce_sum(x) ==> 6
+
+#按列求和
+
+tf.reduce_sum(x, 0) ==> [2, 2, 2]
+
+#按行求和
+
+tf.reduce_sum(x, 1) ==> [3, 3]
+
+#按照行的维度求和
+
+tf.reduce_sum(x, 1, keep_dims=True) ==> [[3], [3]]
+
+#行列求和
+
+tf.reduce_sum(x, [0, 1]) ==> 6
+```
 
 
 ## 数据标准化
