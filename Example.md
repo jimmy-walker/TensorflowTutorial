@@ -2,6 +2,19 @@
 
 对照着Tensorflow概述(Tensorflow.md)中的整体流程，进行代码解读。
 
+## 快速测试tensorflow的函数
+```python
+import tensorflow as tf;  
+
+A = [[0.8,0.6,0.3], [0.1,0.6,0.4]]  
+B = [1, 1]  
+out = tf.nn.in_top_k(A, B, 1)  
+with tf.Session() as sess:  
+    sess.run(tf.initialize_all_variables())  
+    print sess.run(out)
+```
+
+
 ## train
 
 人脸识别`train.py`
