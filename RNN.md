@@ -28,13 +28,13 @@ RNNs can generate music, sentences, image captions, and much more.
 
 ### 公式
 
-这里的公式维度有参考意义，但是下文开始使用 $$ h $$ 代替 $$ y $$ ，因为两者会不相等，会有变化。
+这里的公式维度有参考意义，但是下文开始使用 $ h $ 代替 $ y $ ，因为两者会不相等，会有变化。
 
 ![](picture/rnn equation.png)
 
 ### memory cells(记忆单元)
 
-将RNN看做起到了记忆的作用。因此**<u>将单个循环神经元或是循环神经元层成为记忆单元。</u>**而记忆单元的状态记为 $$ h_{(t)} $$ 。下文开始使用 $$ h $$ 代替 $$ y $$ ，因为两者会不相等，会有变化。
+将RNN看做起到了记忆的作用。因此**<u>将单个循环神经元或是循环神经元层成为记忆单元。</u>**而记忆单元的状态记为 $ h_{(t)} $ 。下文开始使用 $ h $ 代替 $ y $ ，因为两者会不相等，会有变化。
 
 ### RNN的变体(Sequence/Vector)
 
@@ -258,7 +258,7 @@ print(outputs_val)
 
 <u>所有的输出值都涉及计算梯度下降值；把各个计算出来的梯度下降值，然后再累加。</u>
 
-<u>Note that the gradients flow backward through all the outputs used by the cost function, not just through the final output</u> (for example, in Figure below the cost function is computed using the last three outputs of the network,  $$ Y(2) $$ ,  $$ Y(3) $$ , and  $$ Y(4) $$ , so gradients flow through these three outputs, but not through  $$ Y(0) $$  and  $$ Y(1) $$ ). Moreover, since the same parameters  $$ W $$  and  $$ b $$  are used at each time step, backpropagation will do the right thing and <u>sum over all time steps</u>.
+<u>Note that the gradients flow backward through all the outputs used by the cost function, not just through the final output</u> (for example, in Figure below the cost function is computed using the last three outputs of the network,  $ Y(2) $ ,  $ Y(3) $ , and  $ Y(4) $ , so gradients flow through these three outputs, but not through  $ Y(0) $  and  $ Y(1) $ ). Moreover, since the same parameters  $ W $  and  $ b $  are used at each time step, backpropagation will do the right thing and <u>sum over all time steps</u>.
 
 ![](picture/BPTT.PNG)
 
@@ -336,7 +336,7 @@ t_instance = np.linspace(12.2, 12.2 + resolution * (n_steps + 1), n_steps + 1) #
 plt.figure(figsize=(11,4))
 plt.subplot(121)
 plt.title("A time series (generated)", fontsize=14)
-plt.plot(t, time_series(t), label=r" $$ t . \sin(t) / 3 + 2 . \sin(5t) $$ ")
+plt.plot(t, time_series(t), label=r" $ t . \sin(t) / 3 + 2 . \sin(5t) $ ")
 plt.plot(t_instance[:-1], time_series(t_instance[:-1]), "b-", linewidth=3, label="A training instance") #画在一起，直接用plot，并用label画出图例，最后一位不用[:-1]，因为最后一位是为了显示而已
 plt.legend(loc="lower left", fontsize=14)
 plt.axis([0, 30, -17, 13])

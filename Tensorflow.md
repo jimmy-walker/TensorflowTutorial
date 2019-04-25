@@ -4,20 +4,20 @@
 
 ![](picture/model.jpg)
 
-先使用得到损失值 $$ C $$ 对输入的导数，这里的输入可以看做是下面的 $$ y_4 $$ ，其实下面可以当做是计算 $$ \frac{\partial C}{\partial y_4} $$ ，涉及到交叉熵损失和softmax进行求导（见下方常用函数中softmax的讲解），只不过举了逻辑回归的例子（下面这个公式可以见machine learning中logistic regression的讲解）。
+先使用得到损失值 $ C $ 对输入的导数，这里的输入可以看做是下面的 $ y_4 $ ，其实下面可以当做是计算 $ \frac{\partial C}{\partial y_4} $ ，涉及到交叉熵损失和softmax进行求导（见下方常用函数中softmax的讲解），只不过举了逻辑回归的例子（下面这个公式可以见machine learning中logistic regression的讲解）。
 
- $$ \frac{\partial}{\partial{\theta_j}}l(\theta)=\sum_{i=1}^{m}(y^{(i)}-h_\theta(x^{(i)}))x^{(i)}_j $$ 
+ $ \frac{\partial}{\partial{\theta_j}}l(\theta)=\sum_{i=1}^{m}(y^{(i)}-h_\theta(x^{(i)}))x^{(i)}_j $ 
 
 然后逐步返回计算网络中C对各个参数的导数（可结合“梯度消失和梯度爆炸章节的推导”），<u>**注意，只对一个参数，就看这一路，不用管其他支路**</u>。
- $$ 
+$$
 \begin{align}
 &\frac{\partial C}{\partial b_1}=\frac{\partial C}{\partial y_4}\frac{\partial y_4}{\partial z_4}\frac{\partial z_4}{\partial x_4}\frac{\partial x_4}{\partial z_3}\frac{\partial z_3}{\partial x_3}\frac{\partial x_3}{\partial z_2}\frac{\partial z_2}{\partial x_2}\frac{\partial x_2}{\partial z_1}\frac{\partial z_1}{\partial b_1}\\
 &=\frac{\partial C}{\partial y_4}\sigma'\left(z_4\right)w_4\sigma'\left(z_3\right)w_3\sigma'\left(z_2\right)w_2\sigma'\left(z_1\right)
 \end{align}
- $$ 
-再进行移动，这就是反向传播的精髓，这里是举了逻辑回归的例子，**注意最后的公式中代入的值，其实就是训练数据输入和输出的值，如下面的 $$ x^{(i)} $$ 和 $$ y^{(i)} $$ 。**（下面这个公式可以见machine learning中logistic regression的讲解）
+$$
+再进行移动，这就是反向传播的精髓，这里是举了逻辑回归的例子，**注意最后的公式中代入的值，其实就是训练数据输入和输出的值，如下面的 $ x^{(i)} $ 和 $ y^{(i)} $ 。**（下面这个公式可以见machine learning中logistic regression的讲解）
 
- $$ \theta_j=\theta_j+\alpha\sum_{i=1}^{m}(y^{(i)}-h_\theta(x^{(i)}))x^{(i)}_j=\theta_j+\alpha\sum_{i=1}^{m}(y^{(i)}-\frac{1}{1+e^{-{\theta^T}{x^{(i)}}}})x^{(i)}_j $$ 
+ $ \theta_j=\theta_j+\alpha\sum_{i=1}^{m}(y^{(i)}-h_\theta(x^{(i)}))x^{(i)}_j=\theta_j+\alpha\sum_{i=1}^{m}(y^{(i)}-\frac{1}{1+e^{-{\theta^T}{x^{(i)}}}})x^{(i)}_j $ 
 
 J总结版：以分类为例。
 
@@ -539,7 +539,7 @@ with tf.Session() as sess:
 
 交叉熵刻画的是两个概率分布之间的距离，是分类问题中使用比较广泛的损失函数之一。给定两个概率分布p和q，通过交叉熵计算的两个概率分布之间的距离为：
 
- $$ {\displaystyle H(X=x)=-\sum_x{p(x)logq(x)}} $$ 
+ $ {\displaystyle H(X=x)=-\sum_x{p(x)logq(x)}} $ 
 
 ```python
 def softmax_cross_entropy_with_logits(_sentinel=None,  # pylint: disable=invalid-name
@@ -551,24 +551,24 @@ def softmax_cross_entropy_with_logits(_sentinel=None,  # pylint: disable=invalid
 - logits: 神经网络的最后一层输出，如果有batch的话，它的大小为[batch_size, num_classes], 单样本的话大小就是num_classes
 - labels: 样本的实际标签，大小与logits相同。且必须采用labels=y_，logits=y的形式将参数传入。
 
-具体的执行流程大概分为两步，第一步首先是对网络最后一层的输出做一个softmax，这一步通常是求取输出属于某一类的概率，对于单样本而言，就是输出一个num_classes大小的向量 $$ [Y1,Y2,Y3,....] $$ , 其中 $$ Y1,Y2,Y3 $$ 分别表示属于该类别的概率， softmax的公式为：
+具体的执行流程大概分为两步，第一步首先是对网络最后一层的输出做一个softmax，这一步通常是求取输出属于某一类的概率，对于单样本而言，就是输出一个num_classes大小的向量 $ [Y1,Y2,Y3,....] $ , 其中 $ Y1,Y2,Y3 $ 分别表示属于该类别的概率， softmax的公式为：
 
- $$ {\displaystyle softmax(x_i)={exp(x_i)\over{\sum_jexp(x_j)}}} $$ 
+ $ {\displaystyle softmax(x_i)={exp(x_i)\over{\sum_jexp(x_j)}}} $ 
 
-第二步是对softmax输出的向量 $$ [Y1,Y2,Y3,....] $$ 和样本的实际标签做一个交叉熵，公式如下：
+第二步是对softmax输出的向量 $ [Y1,Y2,Y3,....] $ 和样本的实际标签做一个交叉熵，公式如下：
 
- $$ H_{y'}(y)=-\sum_i{y_i'}log(y_i) $$ 
+ $ H_{y'}(y)=-\sum_i{y_i'}log(y_i) $ 
 
-其中 $$ y_i' $$ 指代实际标签向量中的第i个值， $$ y_i $$ 就是softmax的输出向量 $$ [Y1,Y2,Y3,....] $$ 中的第i个元素的值。
-显而易见。预测 $$ y_i $$ 越准确，结果的值就越小（前面有负号），最后求一个平均，就得到我们想要的loss了
+其中 $ y_i' $ 指代实际标签向量中的第i个值， $ y_i $ 就是softmax的输出向量 $ [Y1,Y2,Y3,....] $ 中的第i个元素的值。
+显而易见。预测 $ y_i $ 越准确，结果的值就越小（前面有负号），最后求一个平均，就得到我们想要的loss了
 
-**这里需要注意的是，这个函数返回值不是一个数，而是一个向量，如果要求交叉熵，我们要在做一步tf.resuce_sum操作，就是对向量里面的所有元素求和, 最后就能得到 $$ H_{y'}(y) $$ ,如果要求loss，则需要做一步tf.reduce_mean操作，对向量求均值.**
+**这里需要注意的是，这个函数返回值不是一个数，而是一个向量，如果要求交叉熵，我们要在做一步tf.resuce_sum操作，就是对向量里面的所有元素求和, 最后就能得到 $ H_{y'}(y) $ ,如果要求loss，则需要做一步tf.reduce_mean操作，对向量求均值.**
 
 ###`tf.nn.softmax`
 
 此函数就等于计算到了上面的这一步，等于是算到了各个类的概率值：
 
- $$ softmax(x)_i={exp(x_i)\over{\sum_jexp(x_j)}} $$ 
+ $ softmax(x)_i={exp(x_i)\over{\sum_jexp(x_j)}} $ 
 
 
 ###`tf.nn.in_top_k`
@@ -882,7 +882,7 @@ with tf.Session() as sess:
 
 ###`tf.losses.absolute_difference`
 Adds an Absolute Difference loss to the training procedure.
- $$ {\displaystyle D_{i}=|x_{i}-m(X)|} $$ 
+ $ {\displaystyle D_{i}=|x_{i}-m(X)|} $ 
 
 ###`tf.argmax`
 Returns the index with the largest value across axes of a tensor. (deprecated arguments)
@@ -1106,7 +1106,7 @@ The `StandardScaler` assumes your data is normally distributed within each featu
 
 The mean and standard deviation are calculated for the feature and then the feature is scaled based on:
 
- $$ \dfrac{x_i – mean(x)}{stdev(x)} $$ 
+ $ \dfrac{x_i – mean(x)}{stdev(x)} $ 
 
 **<u>If data is not normally distributed, this is not the best scaler to use.</u>**
 
@@ -1166,11 +1166,11 @@ All features are now on the same scale relative to one another.
 
 To center the data (make it have zero mean and unit standard error), you subtract the mean and then divide the result by the standard deviation.
 
- $$ x' = \frac{x-\mu}{\sigma} $$ 
+ $ x' = \frac{x-\mu}{\sigma} $ 
 
-You do that on the training set of data. But then you have to apply the same transformation to your testing set (e.g. in cross-validation), or to newly obtained examples before forecast. But you have to use the same two parameters  $$ \mu $$  and  $$ \sigma $$  (values) that you used for centering the training set.
+You do that on the training set of data. But then you have to apply the same transformation to your testing set (e.g. in cross-validation), or to newly obtained examples before forecast. But you have to use the same two parameters  $ \mu $  and  $ \sigma $  (values) that you used for centering the training set.
 
-Hence, every sklearn's transform's `fit()` just calculates the parameters (e.g.  $$ \mu $$  and  $$ \sigma $$  in case of StandardScaler and saves them as an internal objects state. Afterwards, you can call its `transform()` method to apply the transformation to a particular set of examples.
+Hence, every sklearn's transform's `fit()` just calculates the parameters (e.g.  $ \mu $  and  $ \sigma $  in case of StandardScaler and saves them as an internal objects state. Afterwards, you can call its `transform()` method to apply the transformation to a particular set of examples.
 
 `fit_transform()` joins these two steps and is used for the initial fitting of parameters on the training set xx, but it also returns a transformed x′x′. Internally, it just calls first `fit()` and then `transform()`on the same data.
 
@@ -1709,9 +1709,9 @@ One way to implement this with TensorFlow is to evaluate the model on a validati
 
 **由于模型的参数个数一般是由人为指定和调节的，所以正则化常常是用来限制模型参数值不要过大，也被称为惩罚项。一般是在目标函数(经验风险)中加上一个正则化项**。**而这个正则化项一般会采用L1范数或者L2范数。**
 
- $$ J(\theta) = \frac{1}{2m} \left( \sum_{i=1}^{m}  (h(x^{(i)}) – y^{(i)})^2 + \lambda \sum_{j=1}^{n} \theta_j^2 \right) $$ 
+ $ J(\theta) = \frac{1}{2m} \left( \sum_{i=1}^{m}  (h(x^{(i)}) – y^{(i)})^2 + \lambda \sum_{j=1}^{n} \theta_j^2 \right) $ 
 
-**注意这里并没有指定是逻辑回归的正则化情况，给出的是一个一般情况下的正则化**，根据惯例，**我们不对** $$ \theta_0 $$ **进行惩罚,所以最后一项 $$ j $$ 从1开始。**其中 $$ \lambda $$ 叫正则化参数（Regularization Parameter）。如果正则化参数太大，则会把所有参数最小化，导致近似直线，造成欠拟合。
+**注意这里并没有指定是逻辑回归的正则化情况，给出的是一个一般情况下的正则化**，根据惯例，**我们不对** $ \theta_0 $ **进行惩罚,所以最后一项 $ j $ 从1开始。**其中 $ \lambda $ 叫正则化参数（Regularization Parameter）。如果正则化参数太大，则会把所有参数最小化，导致近似直线，造成欠拟合。
 
 **L1会趋向于产生少量的特征，而其他的特征都是0，而L2会选择更多的特征，这些特征都会接近于0。L1在特征选择时候非常有用，而L2就只是一种规则化而已**。
 
@@ -1883,7 +1883,7 @@ with tf.Session() as sess:
 
 ####原理
 
-**在每一次的training step之后，计算权值，使得每个神经元的权值满足 $$ \Vert w \Vert_2 < r $$ 。**
+**在每一次的training step之后，计算权值，使得每个神经元的权值满足 $ \Vert w \Vert_2 < r $ 。**
 
 因为书中写的有点复杂，节约时间就不看代码了。需要用到的时候，再返回去细看。
 
