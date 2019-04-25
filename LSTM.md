@@ -7,7 +7,7 @@ it will perform much better; training will converge faster and it will detect lo
 ### 特点（输出两个状态向量）
 Long Short-Term Memory 长短期记忆
 
-**Its state is split in two vectors: $h(t)$ and $c(t)$ (“c” stands for “cell”). You can think of $h(t)$ as the short-term state and $c(t)$ as the long-term state.**
+**Its state is split in two vectors: $$h(t)$$ and $$c(t)$$ (“c” stands for “cell”). You can think of $$h(t)$$ as the short-term state and $$c(t)$$ as the long-term state.**
 
 ###结构图和公式
 
@@ -139,7 +139,7 @@ states
 
 ![](picture/multiple lstm.jpg)
 
-把多层 LSTM 看成一个整体，这个整体的输出就是最上层 LSTM 的输出：$y_t = h_t (l)$；而这个整体进行循环所依赖的状态则是每一层状态组合成的 tuple，而每一层状态本身又是一个 $(c, h)$ tuple，所以最后结果就是一个 tuple 的 tuple。 **<u>（所以需要提取state中的最后一个tuple的第2个元素作为输出top_layer_h_state = states[-1][1]）</u>**
+把多层 LSTM 看成一个整体，这个整体的输出就是最上层 LSTM 的输出：$$y_t = h_t (l)$$；而这个整体进行循环所依赖的状态则是每一层状态组合成的 tuple，而每一层状态本身又是一个 $$(c, h)$$ tuple，所以最后结果就是一个 tuple 的 tuple。 **<u>（所以需要提取state中的最后一个tuple的第2个元素作为输出top_layer_h_state = states[-1][1]）</u>**
 
 **<u>outputs则是对于最后一层中神经元每个时间步的输出。J注意与普通的单层不同，这里不是tensor而是tuple。[batch_size, max_time, (cell_state_size, hidden state size)]</u>**
 
