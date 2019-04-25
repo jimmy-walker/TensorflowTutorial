@@ -1039,6 +1039,64 @@ tf.reduce_sum(x, 1, keep_dims=True) ==> [[3], [3]]
 tf.reduce_sum(x, [0, 1]) ==> 6
 ```
 
+###`tf.metrics.accuracy`
+
+**J这个例子告诉了我们为什么对于大数据不能全部读取时，需要用两个tensorflow的操作：一个更新`update_op`，一个最终计算：`accuracy`**
+
+Calculates how often `predictions` matches `labels`.
+
+ ```
+tf.metrics.accuracy(
+    labels,
+    predictions,
+    weights=None,
+    metrics_collections=None,
+    updates_collections=None,
+    name=None
+)
+ ```
+
+- 会同样地创建两个变量（变量会加入`tf.GraphKeys.LOCAL_VARIABLES`集合中），并将其放入幕后的计算图中：
+- `total`（相当于`N_CORRECT`）
+- `count`（相当于`N_ITEMS_SEEN`）
+- 返回两个tensorflow操作。
+- `accuracy`（相当于`calculate_accuracy()`）
+- `update_op`（相当于`update_running_variables()`）
+
+```python
+#原理示例：
+# Create running variables
+N_CORRECT = 0
+N_ITEMS_SEEN = 0
+
+def reset_running_variables():
+    """ Resets the previous values of running variables to zero     """
+    global N_CORRECT, N_ITEMS_SEEN
+    N_CORRECT = 0
+    N_ITEMS_SEEN = 0
+
+def update_running_variables(labs, preds):
+    global N_CORRECT, N_ITEMS_SEEN
+    N_CORRECT += (labs == preds).sum()
+    N_ITEMS_SEEN += labs.size
+
+def calculate_accuracy():
+    global N_CORRECT, N_ITEMS_SEEN
+    return float(N_CORRECT) / N_ITEMS_SEEN
+
+reset_running_variables()
+
+for i in range(n_batches):
+    update_running_variables(labs=labels[i], preds=predictions[i])
+
+accuracy = calculate_accuracy()
+print("[NP] SCORE: ", accuracy)
+
+[OUTPUT]
+[NP] SCORE:  0.6875
+```
+
+
 
 ## 数据标准化
 
