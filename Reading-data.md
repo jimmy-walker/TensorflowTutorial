@@ -23,7 +23,9 @@ There are four methods of getting data into a TensorFlow program:
 - `QueueRunner`: a queue-based input pipeline reads the data from files at the beginning of a TensorFlow graph.
 - Preloaded data: a constant or variable in the TensorFlow graph holds all the data (for small data sets).
 
-## 生成tfrecords-bert中最新的生成方式:数据写入 .tfrecords 文件，需要将每一个样本数据封装为tf.train.Example格式，再将Example逐个写入文件。Example格式中的数据基础类型是tf.train.Feature
+## 生成tfrecords-bert中最新的生成方式:
+
+数据写入 .tfrecords 文件，需要将每一个样本数据封装为tf.train.Example格式，再将Example逐个写入文件。Example格式中的数据基础类型是tf.train.Feature。
 
 ```python
 def file_based_convert_examples_to_features(
@@ -125,6 +127,67 @@ tf.train.SequenceExample(context=, featurelists=): 传入的context对应一个 
 ```
 tf.train.FeatureList(feature=[tf.train.Feature(value=[v]) for v in [2, 3, 5, 20,...] ] )
 ```
+
+## 读取tfrecords-bert中最新的读取方式：
+
+- 读入所有的tfrecord文件，组成列表传入dataset = tf.data.TFRecordDataset(filename)
+- 利用函数的方式进行处理dataset = dataset.map(decode)，对其中每一个图片文件名进行处理，返回的也只是一个样本。注意这里虽然没有对所有样本循环，我猜测是流式隐循环；
+  然后设置shuffle（不用考虑min_after_dequeue和num_threads），repeat和batch或apply(tf.contrib.data.batch_and_drop_remainder(batch_size))
+- 定义解析函数：
+- parse_single_example将之前的A scalar string Tensor, a single serialized Example转变成张量。返回：A `dict` mapping feature keys to `Tensor` and `SparseTensor` values.
+- 其中FixedLenFeature表示Configuration for parsing a fixed-length input feature，J理解为怎么从protocol buffer中以怎样的格式结束数据。
+
+
+
+```python
+def file_based_input_fn_builder(input_file, seq_length, is_training,
+                                drop_remainder):
+  """Creates an `input_fn` closure to be passed to TPUEstimator."""
+
+  name_to_features = {
+      "input_ids": tf.FixedLenFeature([seq_length], tf.int64),
+      "input_mask": tf.FixedLenFeature([seq_length], tf.int64),
+      "segment_ids": tf.FixedLenFeature([seq_length], tf.int64),
+      "label_ids": tf.FixedLenFeature([], tf.int64),
+  }
+
+  def _decode_record(record, name_to_features):
+    """Decodes a record to a TensorFlow example."""
+    example = tf.parse_single_example(record, name_to_features)
+
+    # tf.Example only supports tf.int64, but the TPU only supports tf.int32.
+    # So cast all int64 to int32.
+    for name in list(example.keys()):
+      t = example[name]
+      if t.dtype == tf.int64:
+        t = tf.to_int32(t)
+      example[name] = t
+
+    return example
+
+  def input_fn(params):
+    """The actual input function."""
+    batch_size = params["batch_size"]
+
+    # For training, we want a lot of parallel reading and shuffling.
+    # For eval, we want no shuffling and parallel reading doesn't matter.
+    d = tf.data.TFRecordDataset(input_file)
+    if is_training:
+      d = d.repeat()
+      d = d.shuffle(buffer_size=100)
+
+    d = d.apply(
+        tf.contrib.data.map_and_batch(
+            lambda record: _decode_record(record, name_to_features),
+            batch_size=batch_size,
+            drop_remainder=drop_remainder))
+
+    return d
+
+  return input_fn
+```
+
+
 
 ## `QueueRunner`
 
