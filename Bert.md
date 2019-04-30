@@ -60,7 +60,7 @@ Position embeddings和self-attention中用不一样，**self-attention中使用�
 ```
 vocab_size: Vocabulary size of `inputs_ids` in `BertModel`. #词典大小
 hidden_size: Size of the encoder layers and the pooler layer.  transformer block中的一层的维度的大小。J决定了词向量的大小。
-num_hidden_layers: Number of hidden layers in the Transformer encoder.就是transformer内堆叠的attention block的个数。注意，bert是双向的transformer模块的连接。所以上图花了两层trm。
+num_hidden_layers: Number of hidden layers in the Transformer encoder.就是transformer内堆叠的encoder的个数，看上图中那个N*的意思。注意，bert是双向的transformer模块的连接。所以上图花了两层trm。
 num_attention_heads: Number of attention heads for each attention layer in
 the Transformer encoder. 就是attention中的head头数，子空间数
 intermediate_size: The size of the "intermediate" (i.e., feed-forward)
