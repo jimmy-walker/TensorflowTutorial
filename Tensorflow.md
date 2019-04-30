@@ -116,7 +116,7 @@ save_path = new_saver.save(sess, os.path.join(model_path, "model.ckpt"), global_
 print("Model saved in file: %s" % save_path)
 ```
 
-##安装
+##安装（CPU版本，windows和linux都是这么安装）
 ```linux
 conda create -n tf35 python=3.5
 source activate tf35
