@@ -67,7 +67,41 @@ intermediate_size: The size of the "intermediate" (i.e., feed-forward)
 layer in the Transformer encoder. 就是前向网络中的维度，放大到多大的维度，然后再转回去。J这里本以为这是要把多头的输出进行整合到固定输出，后来发现不是，有一个W已经在输入feed forward前就把数据维度整合好了，这里只是为了投影到高纬空间，然后使用relu来进行提取信息。
 ```
 
+## 关于attention的概念总结！！！！！
 
+####传统sequence to sequence
+
+传统的sequence to sequence，通过encoder，把 $$ X=(x_0,x_1,x_2,x_3) $$ 映射为一个隐层状态 $$ h $$ ，再经由decoder将 $$ h $$ 映射为 $$ Y=(y_0,y_1,y_2) $$ （注意这里向量长度可以发生变化，即与输入长度不同）；最后将 $$ Y $$ 与 $$ T $$ 做loss（通常为交叉熵），训练网络。
+
+####attention
+
+而attention则是：通过encoder，把 $$ X=(x_0,x_1,x_2,x_3) $$ 映射为一个隐层状态 $$ H=(h_0,h_1,h_2,h_3) $$ ，再经由decoder把 $$ H=(h_0,h_1,h_2,h_3) $$ 映射为 $$ Y=(y_0,y_1,y_2) $$ 。这里精妙的地方就在于，**Y中的每一个元素都与H中的所有元素相连（严格来说，应该是解码器S中每个元素都和H中所有元素相连，这就是attention的特点）**，而**每个元素通过不同的权值给与Y不同的贡献**。
+
+![](picture/attention.jpg)
+
+**J理解为上图自己画的红线位置，也有图中下部分的encoder的hidden state输入。此外y就表示输出词语，比如“I”，而s则表示decoder的隐状态。**
+
+#### transformer
+
+transformer就是一个升级版的seq2seq，也是由一个encoder和一个decoder组成的；encoder对输入序列进行编码，即 $$ X=(x_0,x_1,x_2,...,x_{T_x}) $$ 变成 $$ H=(h_0,h_1,h_2,...,h_{T_x}) $$ ；decoder对 $$ H=(h_0,h_1,h_2,...,h_{T_x}) $$ 进行解码，得到 $$ Y=(y_0,y_1,y_2,...,y_{T_y}) $$ 。但是神奇的是，encoder和decoder都不用RNN，而且换成了多个attention。
+
+**每一个embedding，经过query和key，softmax计算出权重，再乘以value，得到新的向量。这就是 self-attention 层的输出( 第一个单词对应的输出 )。J注意下图最后一步这是对于所有的位置的向量的汇总。**
+
+$$ x_{1}^{'}=\sum ^{n}_{i=1}a_{1i}\times v_{i}$$ 
+
+![](picture/self-attention-output.png)
+
+#### 多头运算及矩阵并行运算
+
+上面是将**每个token所对应的1个query逐一计算**。
+
+矩阵并行运算意味着实现了将**每个token所对应的1个query并行计算，从而达到同时对每个token向量进行信息提炼**。（**J理解就是输入的token向量因为有很多组成：句子、词义等，所以就将分成多个子空间进行计算不同query（但实际其实各个子空间都是一样的维度，看下文的transformer译文就可以知道了！），注意这就是multi-head的意义**）
+
+Multi-Head更近了一步：**可以实现将每个token所对应的h个queries并行计算，从而达到同时对每个token向量进行多方面的信息提炼**。
+
+![](picture/transformer_attention_heads_qkv.png)
+
+![](picture/transformer_multi-headed_self-attention-recap.png)
 
 ## Reference
 
