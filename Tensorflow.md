@@ -1221,6 +1221,79 @@ tf.slice(t, [1, 0, 0], [-1, -1, -1])
 [[[3,3,3], [4,4,4]], [[5,5,5], [6,6,6]]]
 ```
 
+### `tf.cast`
+
+tf.cast：用于改变某个张量的数据类型
+
+例如：
+
+import tensorflow as tf;
+import numpy as np;
+
+A = tf.convert_to_tensor(np.array([[1,1,2,4], [3,4,8,5]]))
+
+with tf.Session() as sess:
+	print A.dtype
+	b = tf.cast(A, tf.float32)
+	print b.dtype
+输出：
+<dtype: 'int64'>
+<dtype: 'float32'>
+
+开始的时候定义A没有给出类型，采用默认类型，整形。利用tf.cast函数就改为float类型
+### tensorflow算术运算中的Broadcasting 
+
+当两个数组进行算术运算时，**NumPy 从后向前，逐元素比较两个数组的形状**。当逐个比较的元素值满足以下条件时，认为满足 Broadcasting 的条件：
+
+1. **相等**
+2. **其中一个是1**
+
+当不相同的维度时，会将1拉长复制到另一个数组的维度。
+
+```python
+to_mask = tf.cast(
+  tf.reshape(to_mask, [batch_size, 1, to_seq_length]), tf.float32)
+
+# We don't assume that `from_tensor` is a mask (although it could be). We
+# don't actually care if we attend *from* padding tokens (only *to* padding)
+# tokens so we create a tensor of all ones.
+#
+# `broadcast_ones` = [batch_size, from_seq_length, 1]
+broadcast_ones = tf.ones(
+  shape=[batch_size, from_seq_length, 1], dtype=tf.float32)
+
+# Here we broadcast along two dimensions to create the mask.
+mask = broadcast_ones * to_mask
+
+[[[1. 1. 1. 0. 0.]]
+
+ [[1. 1. 1. 1. 1.]]]
+
+[[[1.]
+  [1.]
+  [1.]
+  [1.]
+  [1.]]
+
+ [[1.]
+  [1.]
+  [1.]
+  [1.]
+  [1.]]]
+
+[[[1. 1. 1. 0. 0.]
+  [1. 1. 1. 0. 0.]
+  [1. 1. 1. 0. 0.]
+  [1. 1. 1. 0. 0.]
+  [1. 1. 1. 0. 0.]]
+
+ [[1. 1. 1. 1. 1.]
+  [1. 1. 1. 1. 1.]
+  [1. 1. 1. 1. 1.]
+  [1. 1. 1. 1. 1.]
+  [1. 1. 1. 1. 1.]]]
+```
+
 
 
 ## 数据标准化

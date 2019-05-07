@@ -31,7 +31,7 @@ Position embeddings和self-attention中用不一样，**self-attention中使用�
 
 [CLS]表示的是特殊分类嵌入，它是Transformer的输出。对于句子级分类任务，[CLS]就是输入序列的固定维度的表示(就像词向量直接拼成句向量再输入模型中一样)。对于非分类的任务，则忽略此向量。
 
-##模型架构（BERT里每一个Trm基本上就是self-attention的编码器结构）
+##模型架构（BERT里每一个Trm基本上就是self-attention的编码器结构，只不过有N*，J注意每一个Trm中有hidden_size的输入，而Trm的总数等于seq length，比如第一个Trm得到很多其他Trm的输入，就能计算后面的head，总体本以为是两层Trim结构，其实代表了N=2时的情景）
 
 ![img](picture/bert1.jpg)图2 模型框架
 
@@ -59,8 +59,8 @@ Position embeddings和self-attention中用不一样，**self-attention中使用�
 
 ```
 vocab_size: Vocabulary size of `inputs_ids` in `BertModel`. #词典大小
-hidden_size: Size of the encoder layers and the pooler layer.  transformer block中的一层的维度的大小。J决定了词向量的大小。
-num_hidden_layers: Number of hidden layers in the Transformer encoder.就是transformer内堆叠的encoder的个数，看上图中那个N*的意思。注意，bert是双向的transformer模块的连接。所以上图花了两层trm。
+hidden_size: Size of the encoder layers and the pooler layer.  transformer block中的一层的维度的大小。J决定了词向量的大小。J注意这是上图中一个trm中的大小，然后一个seq_length中的所有词都同时输入到各个trm中，所以图中画了很多歌trm。
+num_hidden_layers: Number of hidden layers in the Transformer encoder.就是transformer内堆叠的encoder的个数，看上图中那个N*的意思。注意，bert是双向的transformer模块的连接。本以为上图画了两层trm。但是发现代码中没有两层，所谓的双向就是trm得到所有其他trm的连接而已。
 num_attention_heads: Number of attention heads for each attention layer in
 the Transformer encoder. 就是attention中的head头数，子空间数
 intermediate_size: The size of the "intermediate" (i.e., feed-forward)
@@ -99,9 +99,15 @@ $$ x_{1}^{'}=\sum ^{n}_{i=1}a_{1i}\times v_{i}$$
 
 Multi-Head更近了一步：**可以实现将每个token所对应的h个queries并行计算，从而达到同时对每个token向量进行多方面的信息提炼**。
 
+此外，**J注意这里还有一个将多头的结果合并后重新变换维度到与输入的维度一致hidden_size，但其实在代码中多头合并后已经与输入维度一致了，再进行变化的原因是想让这几个效果混合在一起，而不是单纯的合并。见下图的最右侧，这里不是前向网络！**
+
 ![](picture/transformer_attention_heads_qkv.png)
 
 ![](picture/transformer_multi-headed_self-attention-recap.png)
+
+#### 全连接加上两次残差和dropout
+
+![](picture/transformer_resideual_layer_norm_2.png)
 
 ## Reference
 
