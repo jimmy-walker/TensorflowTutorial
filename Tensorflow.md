@@ -239,7 +239,7 @@ with tf.Session() as sess:
     result = f.eval()
 ```
 
-#### 常用语进行调试使用：
+#### 常用于进行调试使用：
 
 ```python
 import tensorflow as tf
