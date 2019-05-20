@@ -31,7 +31,7 @@ Position embeddings和self-attention中用不一样，**self-attention中使用�
 
 [CLS]表示的是特殊分类嵌入，它是Transformer的输出。对于句子级分类任务，[CLS]就是输入序列的固定维度的表示(就像词向量直接拼成句向量再输入模型中一样)。对于非分类的任务，则忽略此向量。
 
-##模型架构（BERT里每一个Trm基本上就是self-attention的编码器结构，只不过有N*，J注意每一个Trm中有hidden_size的输入，而Trm的总数等于seq length，比如第一个Trm得到很多其他Trm的输入，就能计算后面的head，总体本以为是两层Trim结构，其实代表了N=2时的情景）
+##模型架构（BERT里每一个Trm基本上就是self-attention的编码器结构（后来看过源代码，这么说不准确，应该说是每一层中所有的Trim合并起来就是self-attention结构，因为代码中也是这么计算的，不会对多个token都新建一个self-attention，而是一起计算），只不过有N*，J注意每一个Trm中有hidden_size的输入，而Trm的总数等于seq length，比如第一个Trm得到很多其他Trm的输入，就能计算后面的head，总体本以为是两层Trim结构，其实代表了N=2时的情景）
 
 ![img](picture/bert1.jpg)图2 模型框架
 
