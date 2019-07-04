@@ -1,4 +1,4 @@
-#Tensorflow Summary
+#Tensorflow Summary/Logging
 
 ## 将test的结果也写进tensorboard中
 
@@ -272,10 +272,56 @@ with tf.Session() as sess:
     test_writer.close()
 ```
 
+## tensorflow log show in console and file
+
+将这段代码放在文件最上方即可。
+
+```python
+from logging.config import dictConfig
+import logging
+# Setup Logging
+LOG_FILE = "log.txt"
+LOGGING_CONFIG = dict(
+    version=1,
+    formatters={
+        # For files
+        'detailed': {'format':
+              '%(asctime)s %(name)-12s %(levelname)-8s %(message)s'},
+        # For the console
+        'console': {'format':
+              '[%(levelname)s] %(message)s'}
+    },
+    handlers={
+        'console': {
+            'class': 'logging.StreamHandler',
+            'level': logging.DEBUG,
+            'formatter': 'console',
+        },
+        'file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'level': logging.DEBUG,
+            'formatter': 'detailed',
+            'filename': LOG_FILE,
+            'mode': 'a',
+            'maxBytes': 10485760,  # 10 MB
+            'backupCount': 5
+        }
+    },
+    root={
+        'handlers': ['console', 'file'],
+        'level': logging.DEBUG,
+    },
+    disable_existing_loggers=False
+)
+dictConfig(LOGGING_CONFIG)
+```
+
+
+
 ## Reference
 
 - [网上一个tensorflow的例子，考虑修改就能快速开发](https://github.com/tobegit3hub/tensorflow_template_application/blob/master/dense_classifier.py)
-
 - [官网tf.data的例子，就可以考虑修改便能读取数据了](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/examples/how_tos/reading_data/fully_connected_reader.py)
-
 - [另一个网上tensorflow的例子](https://github.com/aymericdamien/TensorFlow-Examples)
+- [直接将tf log 输出到文件，不显示屏幕](https://github.com/google-research/bert/issues/109)
+- [将tf log同时输出到文件及屏幕](https://stackoverflow.com/questions/39589808/tensorflow-logs-not-showing-up-in-console-and-file)

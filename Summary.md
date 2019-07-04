@@ -2,7 +2,7 @@
 
 * [Tensorflow概述](Tensorflow.md)
 * [Reading data](Reading-data.md)
-* [Tensorflow Summary](Tensorflow-Summary.md)
+* [Tensorflow Summary/Logging](Tensorflow-Summary-Logging.md)
 * [TensorBoard](TensorBoard.md)
 * [TFLearn](TFLearn.md)
 * [梯度消失和梯度爆炸](梯度消失和梯度爆炸.md)
