@@ -249,6 +249,12 @@ c = a * b
 with tf.Session():
   # We can also use 'c.eval()' here.
   print(c.eval())
+
+temp_var = tf.get_variable("temp", shape=[1], initializer=tf.initializers.constant(1.5))
+with tf.Session() as sess:
+    sess.run(tf.global_variables_initializer()) #otherwise it will error: Attempting to use uninitialized value” in variable initialization
+    sess.run(temp_var)
+    sess.run(c)
 ```
 
 
